@@ -12,7 +12,6 @@ module ERPNext.Client
 
 import Network.HTTP.Client
 import Data.Text
-import Prelude
 
 getDocTypeList :: Config -> IO [a]
 getDocTypeList _ = error "implement"
