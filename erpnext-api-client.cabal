@@ -21,6 +21,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , http-client
                      , text
+                     , aeson
   default-language:    GHC2021
   ghc-options:         -Wall
                        -Wcompat
