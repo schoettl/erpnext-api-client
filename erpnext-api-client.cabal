@@ -20,6 +20,7 @@ library
   exposed-modules:     ERPNext.Client
   build-depends:       base >= 4.7 && < 5
                      , http-client
+                     , http-types
                      , text
                      , aeson
   default-language:    GHC2021

@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module ERPNext.Client
   ( getDocTypeList
@@ -18,7 +19,9 @@ module ERPNext.Client
   ) where
 
 import Network.HTTP.Client
+import Network.HTTP.Types.Header (hAuthorization, Header)
 import Data.Text
+import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
 import Data.Proxy qualified
 
@@ -27,12 +30,25 @@ import Data.Proxy qualified
 class IsDocType a where
   docTypeName :: Text
 
-getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config  -> ApiResponse [a]
+getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config -> ApiResponse [a]
 getDocTypeList = error (unpack $ docTypeName @a)
 
 getDocType :: forall a. (IsDocType a, FromJSON a) => Config -> Text -> IO (ApiResponse a)
-getDocType config id =
-  error "implement"
+getDocType config id = do
+    initialRequest <- parseRequest $ unpack $ baseUrl config <> "/resource/" <> docTypeName @a <> "/" <> id
+    let request = initialRequest
+                    { method = "GET"
+                    , requestHeaders = [mkAuthHeader config]
+                    }
+    manager <- Network.HTTP.Client.newManager $ tlsSettings config
+    response <- Network.HTTP.Client.httpLbs request manager
+    let value = decode (responseBody response) :: Maybe Value
+    let result = decode (responseBody response) :: Maybe (DataWrapper a)
+
+    return $ case (result, value) of
+        (Just res, Just val) -> Ok (getData res) val
+        (Nothing, Just val) -> Err "error" (Just val)
+        (Nothing, Nothing) -> Err "error" Nothing
 
 {- | Delete a named object.
 
@@ -65,8 +81,8 @@ mkConfig baseUrl apiKey apiSecret = Config
   }
 
 -- | Update 'Config' and set user-provided TLS settings.
-withTlsSettings :: Config -> ManagerSettings -> Config
-withTlsSettings c x = c { tlsSettings = x }
+withTlsSettings :: ManagerSettings -> Config -> Config
+withTlsSettings x c = c { tlsSettings = x }
 
 -- | Create the API secret used together with the API key for authorization.
 mkSecret :: Text -> Secret
@@ -85,6 +101,12 @@ data Secret = Secret
   { getSecret :: Text
   }
 
+data DataWrapper a = DataWrapper { getData :: a }
+  deriving Show
+
+instance FromJSON (DataWrapper a) where
+  parseJSON = withObject "DataWrapper" (\o -> o .: "data")
+
 -- TODO: Placeholder
 -- TODO: Maybe rename type to make it more abstract (not tied to the URL query string)?
 -- TODO: Maybe change type or make opaque type to prevent invalid combinations?
@@ -94,4 +116,9 @@ data QueryStringParam = Asc Text | Desc Text | Fields [Text]
 -- (esp. in the error case), the raw response in case the response
 -- cannot be parsed, the http response incl. http status code (this
 -- probably makes the raw text accessible)
-data ApiResponse a = Ok a Value | Error Text (Maybe Value)
+data ApiResponse a = Ok a Value | Err Text (Maybe Value)
+  deriving Show
+
+mkAuthHeader :: Config -> Header
+mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
+                          in (hAuthorization, encodeUtf8 $ "token " <> authToken)
