@@ -26,6 +26,7 @@ import Data.Proxy qualified
 -- Each DocType has a unique name.
 class IsDocType a where
   docTypeName :: Text
+  -- TODO: implement auto-derive (using typename and generic)?
 
 getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config -> Filters -> ApiResponse [a]
 getDocTypeList = error (unpack $ docTypeName @a)
