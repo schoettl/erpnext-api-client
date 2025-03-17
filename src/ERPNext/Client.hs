@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module ERPNext.Client
+module ERPNext.Client 
   ( getDocTypeList
   , getDocType
   , postDocType
@@ -20,18 +20,34 @@ module ERPNext.Client
 
 import Network.HTTP.Client
 import Network.HTTP.Types.Header (hAuthorization, Header)
-import Data.Text
+import Data.Text hiding (map)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
 import Data.Proxy qualified
+import ERPNext.Client.Filters (Filters, makeFiltersText)
+import Prelude
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name.
 class IsDocType a where
   docTypeName :: Text
 
-getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config -> ApiResponse [a]
-getDocTypeList = error (unpack $ docTypeName @a)
+getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config  -> [QueryStringParam]-> IO (ApiResponse [a])
+getDocTypeList config qsParams = do
+  initialRequest <- parseRequest $ unpack $ baseUrl config <> "/resource/" <> docTypeName @a <> "?" <> renderQueryStringParams qsParams
+  let request = initialRequest
+                  { method = "GET"
+                  , requestHeaders = [mkAuthHeader config]
+                  }
+  manager <- Network.HTTP.Client.newManager $ tlsSettings config
+  response <- Network.HTTP.Client.httpLbs request manager
+  let value = decode (responseBody response) :: Maybe Value
+  let result = decode (responseBody response) :: Maybe (DataWrapper [a])
+
+  return $ case (result, value) of
+      (Just res, Just val) -> Ok (getData res) val
+      (Nothing, Just val) -> Err "error" (Just val)
+      (Nothing, Nothing) -> Err "error" Nothing
 
 getDocType :: forall a. (IsDocType a, FromJSON a) => Config -> Text -> IO (ApiResponse a)
 getDocType config id = do
@@ -104,13 +120,34 @@ data Secret = Secret
 data DataWrapper a = DataWrapper { getData :: a }
   deriving Show
 
-instance FromJSON (DataWrapper a) where
-  parseJSON = withObject "DataWrapper" (\o -> o .: "data")
+instance FromJSON a => FromJSON (DataWrapper a) where
+  parseJSON = withObject "DataWrapper" $ \obj -> do
+    dataValue <- obj .: "data"
+    return (DataWrapper dataValue)
 
 -- TODO: Placeholder
 -- TODO: Maybe rename type to make it more abstract (not tied to the URL query string)?
 -- TODO: Maybe change type or make opaque type to prevent invalid combinations?
 data QueryStringParam = Asc Text | Desc Text | Fields [Text]
+-- | F Filters
+
+renderQueryStringParam :: QueryStringParam -> Text
+renderQueryStringParam qsParam = 
+  case qsParam of
+    Asc _ ->
+      ""
+    Desc _ ->
+      ""
+    Fields _ ->
+      ""
+    -- F filters ->
+    --   makeFiltersText filters
+
+
+renderQueryStringParams :: [QueryStringParam] -> Text
+renderQueryStringParams params = intercalate "&" (map renderQueryStringParam params)
+
+
 
 -- TODO: the response should also contain: the full JSON Value
 -- (esp. in the error case), the raw response in case the response
