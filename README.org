@@ -19,7 +19,7 @@ remote method calls, and file uploads.
 
 For CRUD operations on a given DocType there are:
 
-- =GET= list of all documents (=getDocTypeList=)
+- =GET= list of all documents of a DocType (=getDocTypeList=)
 - =POST= to create a new document (=postDocType=)
 - =GET= a document by name (=getDocType=)
 - =PUT= to update a document by name (=putDocType=)
