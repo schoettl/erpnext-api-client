@@ -27,7 +27,7 @@ import Data.Proxy qualified
 class IsDocType a where
   docTypeName :: Text
 
-getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config -> [QueryStringParam] -> ApiResponse [a]
+getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config -> Filters -> ApiResponse [a]
 getDocTypeList = error (unpack $ docTypeName @a)
 
 getDocType :: forall a. (IsDocType a, FromJSON a) => Config -> Text -> IO (ApiResponse a)
@@ -93,4 +93,4 @@ data QueryStringParam = Asc Text | Desc Text | Fields [Text]
 -- (esp. in the error case), the raw response in case the response
 -- cannot be parsed, the http response incl. http status code (this
 -- probably makes the raw text accessible)
-data ApiResponse a = Ok a | Error Text
+data ApiResponse a = Ok a Value | Error HttpResponse (Maybe Value)
