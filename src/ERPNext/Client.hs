@@ -10,10 +10,8 @@ module ERPNext.Client
   , deleteDocType
   , mkSecret
   , mkConfig
-  , withTlsSettings
   , IsDocType (..)
   , Config ()
-  , managerSettings
   , Secret ()
   , QueryStringParam (..)
   , ApiResponse (..)
@@ -93,12 +91,7 @@ mkConfig baseUrl apiKey apiSecret = Config
   { baseUrl = baseUrl
   , apiKey = apiKey
   , apiSecret = apiSecret
-  , managerSettings = defaultManagerSettings
   }
-
--- | Update 'Config' and set user-provided TLS settings.
-withTlsSettings :: ManagerSettings -> Config -> Config
-withTlsSettings x c = c { managerSettings = x }
 
 -- | Create the API secret used together with the API key for authorization.
 mkSecret :: Text -> Secret
@@ -109,7 +102,6 @@ data Config = Config
   { baseUrl :: Text
   , apiKey :: Text
   , apiSecret :: Secret
-  , managerSettings :: ManagerSettings
   }
 
 -- | Opaque type to store the API secret.
