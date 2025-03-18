@@ -42,17 +42,19 @@ getDocTypeList manager config qsParams = do
     Right value -> return $ case (fromJSON value) :: Result (DataWrapper [a]) of
       Success result -> Ok response (getData result) value
       Error err -> Err response Nothing
+
 getDocType :: forall a. (IsDocType a, FromJSON a) => Manager -> Config -> Text -> IO (ApiResponse a)
 getDocType manager config id = do
   request <- createRequest config ("/resource/" <> docTypeName @a <> "/" <> id) "GET"
   response <- Network.HTTP.Client.httpLbs request manager
-  let body = responseBody response
   let body = responseBody response
   case eitherDecode body :: Either String Value of
     Left _ -> return $ Err response Nothing
     Right value -> return $ case (fromJSON value) :: Result (DataWrapper a) of
       Success result -> Ok response (getData result) value
       Error err -> Err response Nothing
+
+{- | Delete a named object.
 
 The 'Data.Prox.Proxy' parameter is used to figure out the DocType.
 A customer can be deleted like this:
