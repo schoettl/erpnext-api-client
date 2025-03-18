@@ -24,7 +24,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
 import Data.Proxy
 import Data.ByteString.Lazy (ByteString)
-import ERPNext.Client.Filters (Filters, renderFilters)
+import ERPNext.Client.QueryStringParams
 import Prelude
 
 -- | Type class for types which represent an ERPNext DocType.
@@ -107,29 +107,6 @@ instance FromJSON a => FromJSON (DataWrapper a) where
   parseJSON = withObject "DataWrapper" $ \obj -> do
     dataValue <- obj .: "data"
     return (DataWrapper dataValue)
-
--- TODO: Placeholder
--- TODO: Maybe rename type to make it more abstract (not tied to the URL query string)?
--- TODO: Maybe change type or make opaque type to prevent invalid combinations?
-data QueryStringParam = Asc Text | Desc Text | Fields [Text] | F Filters
-
-renderQueryStringParam :: QueryStringParam -> Text
-renderQueryStringParam qsParam = 
-  case qsParam of
-    Asc _ ->
-      ""
-    Desc _ ->
-      ""
-    Fields _ ->
-      ""
-    F filters ->
-      renderFilters filters
-
-
-renderQueryStringParams :: [QueryStringParam] -> Text
-renderQueryStringParams params = intercalate "&" (map renderQueryStringParam params)
-
-
 
 -- TODO: the response should also contain: the full JSON Value
 -- (esp. in the error case), the raw response in case the response

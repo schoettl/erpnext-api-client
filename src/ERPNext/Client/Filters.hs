@@ -39,12 +39,6 @@ data Filter = Filter
   }
   deriving (Show, Eq)
 
-data Filters
-  = Single Filter
-  | And [Filters]
-  | Or [Filters]
-  deriving (Show, Eq)
-
 sanitizeQuotes :: Text -> Text
 sanitizeQuotes = filter (/= '"')
 
@@ -88,25 +82,13 @@ renderFilter f =
     <> renderFilterValue (filterValue f)
     <> "]"
 
-flattenFilters :: Filters -> [Filter]
-flattenFilters expr =
-  case expr of
-    Single f -> [f]
-    And fs -> concatMap flattenFilters fs
-    Or fs -> concatMap flattenFilters fs
-
 urlEncodeValue :: Text -> Text
 urlEncodeValue = pack . escapeURIString isUnreserved . unpack
 
-renderFilters :: Filters -> Text
-renderFilters filters =
+renderFilters :: Text -> [Filter] -> Text
+renderFilters prefix filters =
   let
-    prefix =
-      case filters of
-        Or _ -> "or_filters"
-        _ -> "filters"
-    filtersList = flattenFilters filters
-    encoded = map renderFilter filtersList
+    encoded = map renderFilter filters
     str = "[" <> intercalate ", " encoded <> "]"
   in
     prefix <> "=" <> urlEncodeValue str
