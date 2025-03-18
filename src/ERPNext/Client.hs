@@ -34,11 +34,7 @@ class IsDocType a where
 
 getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
 getDocTypeList manager config qsParams = do
-  initialRequest <- parseRequest $ unpack $ baseUrl config <> "/resource/" <> docTypeName @a <> "?" <> renderQueryStringParams qsParams
-  let request = initialRequest
-                  { method = "GET"
-                  , requestHeaders = [mkAuthHeader config]
-                  }
+  request <- createRequest config ("/resource/" <> docTypeName @a <> "?" <> renderQueryStringParams qsParams) "GET"
   response <- Network.HTTP.Client.httpLbs request manager
   let value = decode (responseBody response) :: Maybe Value
   let result = decode (responseBody response) :: Maybe (DataWrapper [a])
@@ -50,19 +46,15 @@ getDocTypeList manager config qsParams = do
 
 getDocType :: forall a. (IsDocType a, FromJSON a) => Manager -> Config -> Text -> IO (ApiResponse a)
 getDocType manager config id = do
-    initialRequest <- parseRequest $ unpack $ baseUrl config <> "/resource/" <> docTypeName @a <> "/" <> id
-    let request = initialRequest
-                    { method = "GET"
-                    , requestHeaders = [mkAuthHeader config]
-                    }
-    response <- Network.HTTP.Client.httpLbs request manager
-    let value = decode (responseBody response) :: Maybe Value
-    let result = decode (responseBody response) :: Maybe (DataWrapper a)
+  request <- createRequest config ("/resource/" <> docTypeName @a <> "/" <> id) "GET"
+  response <- Network.HTTP.Client.httpLbs request manager
+  let value = decode (responseBody response) :: Maybe Value
+  let result = decode (responseBody response) :: Maybe (DataWrapper a)
 
-    return $ case (result, value) of
-        (Just res, Just val) -> Ok response (getData res) val
-        (Nothing, Just val) -> Err response (Just val)
-        (Nothing, Nothing) -> Err response Nothing
+  return $ case (result, value) of
+      (Just res, Just val) -> Ok response (getData res) val
+      (Nothing, Just val) -> Err response (Just val)
+      (Nothing, Nothing) -> Err response Nothing
 
 {- | Delete a named object.
 
@@ -96,6 +88,17 @@ mkConfig baseUrl apiKey apiSecret = Config
 -- | Create the API secret used together with the API key for authorization.
 mkSecret :: Text -> Secret
 mkSecret = Secret
+
+
+-- | Create the API Request.
+createRequest :: Config -> Text -> Text -> IO Request
+createRequest config path method = do
+  request <- parseRequest $ unpack (baseUrl config <> path)
+  return request
+    { method = encodeUtf8 method
+    , requestHeaders = [mkAuthHeader config]
+    }
+
 
 -- | API client configuration.
 data Config = Config
