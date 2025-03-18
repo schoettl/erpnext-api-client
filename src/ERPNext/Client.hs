@@ -17,12 +17,12 @@ module ERPNext.Client
   , ApiResponse (..)
   ) where
 
-import Network.HTTP.Client
+import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest)
 import Network.HTTP.Types.Header (hAuthorization, Header)
 import Data.Text hiding (map)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
-import Data.Proxy qualified
+import Data.Proxy
 import Data.ByteString.Lazy (ByteString)
 import ERPNext.Client.Filters (Filters, renderFilters)
 import Prelude
@@ -34,25 +34,15 @@ class IsDocType a where
 
 getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
 getDocTypeList manager config qsParams = do
-  request <- createRequest config ("/resource/" <> docTypeName @a <> "?" <> renderQueryStringParams qsParams) "GET"
+  request <- createRequest config (getResourcePath (Proxy @a) <> "?" <> renderQueryStringParams qsParams) "GET"
   response <- Network.HTTP.Client.httpLbs request manager
-  let body = responseBody response
-  return $ case eitherDecode body :: Either String Value of
-    Left _ -> Err response Nothing
-    Right value -> case (fromJSON value) :: Result (DataWrapper [a]) of
-      Success result -> Ok response (getData result) value
-      Error err -> Err response Nothing
+  return $ parseResponse response
 
 getDocType :: forall a. (IsDocType a, FromJSON a) => Manager -> Config -> Text -> IO (ApiResponse a)
 getDocType manager config id = do
-  request <- createRequest config ("/resource/" <> docTypeName @a <> "/" <> id) "GET"
+  request <- createRequest config (getResourcePath (Proxy @a) <> "/" <> id) "GET"
   response <- Network.HTTP.Client.httpLbs request manager
-  let body = responseBody response
-  return $ case eitherDecode body :: Either String Value of
-    Left _ -> Err response Nothing
-    Right value -> case (fromJSON value) :: Result (DataWrapper a) of
-      Success result -> Ok response (getData result) value
-      Error err -> Err response Nothing
+  return $ parseResponse response
 
 {- | Delete a named object.
 
@@ -64,7 +54,7 @@ res <- deleteDocType config "<customer name>" (Proxy :: Proxy Customer)
 @
 -}
 deleteDocType :: forall a. (IsDocType a)
-              => Config -> Text -> Data.Proxy.Proxy a -> IO (ApiResponse Bool)
+              => Config -> Text -> Proxy a -> IO (ApiResponse Bool)
 deleteDocType _ _ _ = error "implement"
 -- note: return type is actually just {"message":"ok"}
 
@@ -160,3 +150,14 @@ data ApiResponse a =
 mkAuthHeader :: Config -> Header
 mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
                           in (hAuthorization, encodeUtf8 $ "token " <> authToken)
+
+parseResponse :: forall a. FromJSON a => Response ByteString -> ApiResponse a
+parseResponse response =
+  case eitherDecode @Value (responseBody response) of
+    Left _ -> Err response Nothing
+    Right value -> case fromJSON value :: Result (DataWrapper a) of
+      Success result -> Ok response (getData result) value
+      Error err -> Err response Nothing
+
+getResourcePath :: forall a. IsDocType a => Proxy a -> Text
+getResourcePath _ = "/resource/" <> docTypeName @a
