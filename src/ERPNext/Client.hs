@@ -24,6 +24,7 @@ import Data.Text hiding (map)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
 import Data.Proxy qualified
+import Data.ByteString.Lazy (ByteString)
 import ERPNext.Client.Filters (Filters, makeFiltersText)
 import Prelude
 
@@ -45,9 +46,9 @@ getDocTypeList config qsParams = do
   let result = decode (responseBody response) :: Maybe (DataWrapper [a])
 
   return $ case (result, value) of
-      (Just res, Just val) -> Ok (getData res) val
-      (Nothing, Just val) -> Err "error" (Just val)
-      (Nothing, Nothing) -> Err "error" Nothing
+      (Just res, Just val) -> Ok response (getData res) val
+      (Nothing, Just val) -> Err response (Just val)
+      (Nothing, Nothing) -> Err response Nothing
 
 getDocType :: forall a. (IsDocType a, FromJSON a) => Config -> Text -> IO (ApiResponse a)
 getDocType config id = do
@@ -62,9 +63,9 @@ getDocType config id = do
     let result = decode (responseBody response) :: Maybe (DataWrapper a)
 
     return $ case (result, value) of
-        (Just res, Just val) -> Ok (getData res) val
-        (Nothing, Just val) -> Err "error" (Just val)
-        (Nothing, Nothing) -> Err "error" Nothing
+        (Just res, Just val) -> Ok response (getData res) val
+        (Nothing, Just val) -> Err response (Just val)
+        (Nothing, Nothing) -> Err response Nothing
 
 {- | Delete a named object.
 
@@ -152,7 +153,16 @@ renderQueryStringParams params = intercalate "&" (map renderQueryStringParam par
 -- (esp. in the error case), the raw response in case the response
 -- cannot be parsed, the http response incl. http status code (this
 -- probably makes the raw text accessible)
-data ApiResponse a = Ok a Value | Err Text (Maybe Value)
+data ApiResponse a =
+    Ok
+     { getResponse :: Response ByteString
+     , getResult :: a
+     , getJsonValue :: Value
+     }
+  | Err
+     { getResponse :: Response ByteString
+     , getJsonValueErr :: Maybe Value
+     }
   deriving Show
 
 mkAuthHeader :: Config -> Header
