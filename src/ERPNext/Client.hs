@@ -37,9 +37,9 @@ getDocTypeList manager config qsParams = do
   request <- createRequest config ("/resource/" <> docTypeName @a <> "?" <> renderQueryStringParams qsParams) "GET"
   response <- Network.HTTP.Client.httpLbs request manager
   let body = responseBody response
-  case eitherDecode body :: Either String Value of
-    Left _ -> return $ Err response Nothing
-    Right value -> return $ case (fromJSON value) :: Result (DataWrapper [a]) of
+  return $ case eitherDecode body :: Either String Value of
+    Left _ -> Err response Nothing
+    Right value -> case (fromJSON value) :: Result (DataWrapper [a]) of
       Success result -> Ok response (getData result) value
       Error err -> Err response Nothing
 
@@ -48,9 +48,9 @@ getDocType manager config id = do
   request <- createRequest config ("/resource/" <> docTypeName @a <> "/" <> id) "GET"
   response <- Network.HTTP.Client.httpLbs request manager
   let body = responseBody response
-  case eitherDecode body :: Either String Value of
-    Left _ -> return $ Err response Nothing
-    Right value -> return $ case (fromJSON value) :: Result (DataWrapper a) of
+  return $ case eitherDecode body :: Either String Value of
+    Left _ -> Err response Nothing
+    Right value -> case (fromJSON value) :: Result (DataWrapper a) of
       Success result -> Ok response (getData result) value
       Error err -> Err response Nothing
 
