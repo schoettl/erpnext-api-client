@@ -95,22 +95,18 @@ flattenFilters expr =
     And fs -> concatMap flattenFilters fs
     Or fs -> concatMap flattenFilters fs
 
-renderFilters :: Filters -> Text
-renderFilters expr =
-  let filtersList = flattenFilters expr
-      encoded = map renderFilter filtersList
-   in "[" <> intercalate ", " encoded <> "]"
-
 urlEncodeValue :: Text -> Text
 urlEncodeValue = pack . escapeURIString isUnreserved . unpack
 
-makeFiltersText :: Filters -> Text
-makeFiltersText filters =
+renderFilters :: Filters -> Text
+renderFilters filters =
   let
     prefix =
       case filters of
         Or _ -> "or_filters"
         _ -> "filters"
-    str = renderFilters filters
-   in
+    filtersList = flattenFilters filters
+    encoded = map renderFilter filtersList
+    str = "[" <> intercalate ", " encoded <> "]"
+  in
     prefix <> "=" <> urlEncodeValue str

@@ -24,7 +24,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
 import Data.Proxy qualified
 import Data.ByteString.Lazy (ByteString)
-import ERPNext.Client.Filters (Filters, makeFiltersText)
+import ERPNext.Client.Filters (Filters, renderFilters)
 import Prelude
 
 -- | Type class for types which represent an ERPNext DocType.
@@ -133,7 +133,7 @@ renderQueryStringParam qsParam =
     Fields _ ->
       ""
     F filters ->
-      makeFiltersText filters
+      renderFilters filters
 
 
 renderQueryStringParams :: [QueryStringParam] -> Text
