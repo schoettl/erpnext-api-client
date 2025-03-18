@@ -36,13 +36,13 @@ getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Manager -> Config  -> [
 getDocTypeList manager config qsParams = do
   request <- createRequest config (getResourcePath (Proxy @a) <> "?" <> renderQueryStringParams qsParams) "GET"
   response <- Network.HTTP.Client.httpLbs request manager
-  return $ parseResponse response
+  return $ parseGetResponse response
 
 getDocType :: forall a. (IsDocType a, FromJSON a) => Manager -> Config -> Text -> IO (ApiResponse a)
 getDocType manager config id = do
   request <- createRequest config (getResourcePath (Proxy @a) <> "/" <> id) "GET"
   response <- Network.HTTP.Client.httpLbs request manager
-  return $ parseResponse response
+  return $ parseGetResponse response
 
 {- | Delete a named object.
 
@@ -53,10 +53,14 @@ A customer can be deleted like this:
 res <- deleteDocType config "<customer name>" (Proxy :: Proxy Customer)
 @
 -}
-deleteDocType :: forall a. (IsDocType a)
-              => Config -> Text -> Proxy a -> IO (ApiResponse Bool)
-deleteDocType _ _ _ = error "implement"
--- note: return type is actually just {"message":"ok"}
+deleteDocType :: forall a. (IsDocType a) => Manager -> Config -> Text -> IO (ApiResponse Bool)
+deleteDocType manager config name = do
+  request <- createRequest config (getResourcePath (Proxy @a) <> "/" <> name) "DELETE"
+  response <- Network.HTTP.Client.httpLbs request manager
+  return $ parseDeleteResponse response
+
+
+
 
 postDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
             => Config -> a -> IO (ApiResponse a)
@@ -128,13 +132,20 @@ mkAuthHeader :: Config -> Header
 mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
                           in (hAuthorization, encodeUtf8 $ "token " <> authToken)
 
-parseResponse :: forall a. FromJSON a => Response ByteString -> ApiResponse a
-parseResponse response =
+parseGetResponse :: forall a. FromJSON a => Response ByteString -> ApiResponse a
+parseGetResponse response =
   case eitherDecode @Value (responseBody response) of
     Left _ -> Err response Nothing
     Right value -> case fromJSON value :: Result (DataWrapper a) of
       Success result -> Ok response (getData result) value
       Error err -> Err response Nothing
+
+parseDeleteResponse :: Response ByteString -> ApiResponse Bool
+parseDeleteResponse response = 
+  case decode (responseBody response) :: Maybe Value of
+    Just res -> if res == object ["data" .= ("ok" :: Text)] then Ok response True res
+                else Err response (Just res)
+    Nothing -> Err response Nothing
 
 getResourcePath :: forall a. IsDocType a => Proxy a -> Text
 getResourcePath _ = "/resource/" <> docTypeName @a
