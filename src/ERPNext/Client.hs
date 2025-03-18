@@ -17,7 +17,7 @@ module ERPNext.Client
   , ApiResponse (..)
   ) where
 
-import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest)
+import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest, RequestBody (..))
 import Network.HTTP.Types.Header (hAuthorization, Header)
 import Data.Text hiding (map)
 import Data.Text.Encoding (encodeUtf8)
@@ -59,16 +59,17 @@ deleteDocType manager config name = do
   response <- Network.HTTP.Client.httpLbs request manager
   return $ parseDeleteResponse response
 
-
-
-
 postDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
             => Config -> a -> IO (ApiResponse a)
 postDocType _ _ = error "implement"
 
-putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
-           => Config -> Text -> a -> IO (ApiResponse a)
-putDocType _ _ _ = error "implement"
+putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a) => Manager -> Config -> Text -> a -> IO (ApiResponse a)
+putDocType manager config name doc = do
+  let path = getResourcePath (Proxy @a) <> "/" <> name
+  request <- createRequestWithBody config path doc "PUT"
+  response <- Network.HTTP.Client.httpLbs request manager
+  return $ parseGetResponse response
+
 
 mkConfig :: Text -> Text -> Secret -> Config
 mkConfig baseUrl apiKey apiSecret = Config
@@ -88,9 +89,17 @@ createRequest config path method = do
   request <- parseRequest $ unpack (baseUrl config <> path)
   return request
     { method = encodeUtf8 method
-    , requestHeaders = [mkAuthHeader config]
+    , requestHeaders = mkHeader config
     }
 
+createRequestWithBody :: (ToJSON a) => Config -> Text -> a -> Text -> IO Request
+createRequestWithBody config path doc method = do
+  request <- parseRequest $ unpack (baseUrl config <> path)
+  return request
+    { method = encodeUtf8 method
+    , requestHeaders = mkHeader config
+    , requestBody = RequestBodyLBS (encode doc)
+    }
 
 -- | API client configuration.
 data Config = Config
@@ -128,9 +137,9 @@ data ApiResponse a =
      }
   deriving Show
 
-mkAuthHeader :: Config -> Header
-mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
-                          in (hAuthorization, encodeUtf8 $ "token " <> authToken)
+mkHeader :: Config -> [Header]
+mkHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
+                          in [(hAuthorization, encodeUtf8 $ "token " <> authToken), ("Content-Type", "application/json")]
 
 parseGetResponse :: forall a. FromJSON a => Response ByteString -> ApiResponse a
 parseGetResponse response =
