@@ -139,8 +139,8 @@ renderQueryStringParam qsParam =
       ""
     Fields _ ->
       ""
-    -- F filters ->
-    --   makeFiltersText filters
+    F filters ->
+      makeFiltersText filters
 
 
 renderQueryStringParams :: [QueryStringParam] -> Text
