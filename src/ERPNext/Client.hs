@@ -128,8 +128,7 @@ instance FromJSON a => FromJSON (DataWrapper a) where
 -- TODO: Placeholder
 -- TODO: Maybe rename type to make it more abstract (not tied to the URL query string)?
 -- TODO: Maybe change type or make opaque type to prevent invalid combinations?
-data QueryStringParam = Asc Text | Desc Text | Fields [Text]
--- | F Filters
+data QueryStringParam = Asc Text | Desc Text | Fields [Text] | F Filters
 
 renderQueryStringParam :: QueryStringParam -> Text
 renderQueryStringParam qsParam = 
