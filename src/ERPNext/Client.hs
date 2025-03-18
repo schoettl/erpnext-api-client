@@ -13,6 +13,7 @@ module ERPNext.Client
   , withTlsSettings
   , IsDocType (..)
   , Config ()
+  , managerSettings
   , Secret ()
   , QueryStringParam (..)
   , ApiResponse (..)
@@ -33,14 +34,13 @@ import Prelude
 class IsDocType a where
   docTypeName :: Text
 
-getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config  -> [QueryStringParam]-> IO (ApiResponse [a])
-getDocTypeList config qsParams = do
+getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
+getDocTypeList manager config qsParams = do
   initialRequest <- parseRequest $ unpack $ baseUrl config <> "/resource/" <> docTypeName @a <> "?" <> renderQueryStringParams qsParams
   let request = initialRequest
                   { method = "GET"
                   , requestHeaders = [mkAuthHeader config]
                   }
-  manager <- Network.HTTP.Client.newManager $ tlsSettings config
   response <- Network.HTTP.Client.httpLbs request manager
   let value = decode (responseBody response) :: Maybe Value
   let result = decode (responseBody response) :: Maybe (DataWrapper [a])
@@ -50,14 +50,13 @@ getDocTypeList config qsParams = do
       (Nothing, Just val) -> Err response (Just val)
       (Nothing, Nothing) -> Err response Nothing
 
-getDocType :: forall a. (IsDocType a, FromJSON a) => Config -> Text -> IO (ApiResponse a)
-getDocType config id = do
+getDocType :: forall a. (IsDocType a, FromJSON a) => Manager -> Config -> Text -> IO (ApiResponse a)
+getDocType manager config id = do
     initialRequest <- parseRequest $ unpack $ baseUrl config <> "/resource/" <> docTypeName @a <> "/" <> id
     let request = initialRequest
                     { method = "GET"
                     , requestHeaders = [mkAuthHeader config]
                     }
-    manager <- Network.HTTP.Client.newManager $ tlsSettings config
     response <- Network.HTTP.Client.httpLbs request manager
     let value = decode (responseBody response) :: Maybe Value
     let result = decode (responseBody response) :: Maybe (DataWrapper a)
@@ -94,12 +93,12 @@ mkConfig baseUrl apiKey apiSecret = Config
   { baseUrl = baseUrl
   , apiKey = apiKey
   , apiSecret = apiSecret
-  , tlsSettings = defaultManagerSettings
+  , managerSettings = defaultManagerSettings
   }
 
 -- | Update 'Config' and set user-provided TLS settings.
 withTlsSettings :: ManagerSettings -> Config -> Config
-withTlsSettings x c = c { tlsSettings = x }
+withTlsSettings x c = c { managerSettings = x }
 
 -- | Create the API secret used together with the API key for authorization.
 mkSecret :: Text -> Secret
@@ -110,7 +109,7 @@ data Config = Config
   { baseUrl :: Text
   , apiKey :: Text
   , apiSecret :: Secret
-  , tlsSettings :: ManagerSettings
+  , managerSettings :: ManagerSettings
   }
 
 -- | Opaque type to store the API secret.
