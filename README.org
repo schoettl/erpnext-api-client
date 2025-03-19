@@ -37,6 +37,9 @@ for DocTypes from a simple DSL (see section below).
 
 ** Usage
 
+This sample code makes a GET request for a named document of the
+given DocType.
+
 # Create example file from emacs with: org-babel-tangle
 
 #+begin_src haskell :tangle example1.hs
