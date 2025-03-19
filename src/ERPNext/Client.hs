@@ -37,30 +37,30 @@ class IsDocType a where
 
 getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
 getDocTypeList manager config qsParams = do
-  let path = getResourcePath (Proxy @a) <> "?" <> renderQueryStringParams qsParams
+  let path = getResourcePath @a <> "?" <> renderQueryStringParams qsParams
   request <- createRequest config path "GET"
   response <- httpLbs request manager
   return $ parseGetResponse response
 
 getDocType :: forall a. (IsDocType a, FromJSON a) => Manager -> Config -> Text -> IO (ApiResponse a)
 getDocType manager config id = do
-  let path = getResourcePath (Proxy @a) <> "/" <> id
+  let path = getResourcePath @a <> "/" <> id
   request <- createRequest config path "GET"
   response <- httpLbs request manager
   return $ parseGetResponse response
 
 {- | Delete a named object.
 
-The 'Data.Prox.Proxy' parameter is used to figure out the DocType.
+The phantom type parameter @a@ is used to figure out the DocType.
 A customer can be deleted like this:
 
 @
-res <- deleteDocType manager config "<customer name>" (Proxy :: Proxy Customer)
+res <- deleteDocType @Customer manager config "<customer name>"
 @
 -}
 deleteDocType :: forall a. (IsDocType a) => Manager -> Config -> Text -> IO (ApiResponse ())
 deleteDocType manager config name = do
-  let path = getResourcePath (Proxy @a) <> "/" <> name
+  let path = getResourcePath @a <> "/" <> name
   request <- createRequest config path "DELETE"
   response <- httpLbs request manager
   return $ parseDeleteResponse response
@@ -68,14 +68,14 @@ deleteDocType manager config name = do
 postDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
             => Manager -> Config -> a -> IO (ApiResponse a)
 postDocType manager config doc = do
-  let path = getResourcePath (Proxy @a)
+  let path = getResourcePath @a
   request <- createRequestWithBody config path "POST" doc
   response <- httpLbs request manager
   return $ parseGetResponse response
 
 putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a) => Manager -> Config -> Text -> a -> IO (ApiResponse a)
 putDocType manager config name doc = do
-  let path = getResourcePath (Proxy @a) <> "/" <> name
+  let path = getResourcePath @a <> "/" <> name
   request <- createRequestWithBody config path "PUT" doc
   response <- httpLbs request manager
   return $ parseGetResponse response
@@ -165,5 +165,5 @@ parseDeleteResponse response =
       Error err -> Err response (Just (value, pack err))
     Nothing -> Err response Nothing
 
-getResourcePath :: forall a. IsDocType a => Proxy a -> Text
-getResourcePath _ = "/resource/" <> urlEncode (docTypeName @a)
+getResourcePath :: forall a. IsDocType a => Text
+getResourcePath = "/resource/" <> urlEncode (docTypeName @a)
