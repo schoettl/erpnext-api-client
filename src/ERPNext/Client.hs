@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module ERPNext.Client
   ( getDocTypeList
@@ -9,7 +10,6 @@ module ERPNext.Client
   , deleteDocType
   , mkSecret
   , mkConfig
-  , withTlsSettings
   , IsDocType (..)
   , Config ()
   , Secret ()
@@ -17,10 +17,17 @@ module ERPNext.Client
   , ApiResponse (..)
   ) where
 
-import Network.HTTP.Client
-import Data.Text
+import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest, RequestBody (..))
+import Network.HTTP.Types (hAuthorization, hContentType, Header)
+import Data.Text hiding (map)
+import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
-import Data.Proxy qualified
+import Data.Proxy
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as LBS
+import ERPNext.Client.QueryStringParams
+import ERPNext.Client.Helper (urlEncode)
+import Prelude
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name.
@@ -28,11 +35,17 @@ class IsDocType a where
   docTypeName :: Text
   -- TODO: implement auto-derive (using typename and generic)?
 
-getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Config -> Filters -> ApiResponse [a]
-getDocTypeList = error (unpack $ docTypeName @a)
+getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
+getDocTypeList manager config qsParams = do
+  request <- createRequest config (getResourcePath (Proxy @a) <> "?" <> renderQueryStringParams qsParams) "GET"
+  response <- Network.HTTP.Client.httpLbs request manager
+  return $ parseGetResponse response
 
-getDocType :: forall a. (IsDocType a, FromJSON a) => Config -> Text -> IO (ApiResponse a)
-getDocType _ _ = error "implement"
+getDocType :: forall a. (IsDocType a, FromJSON a) => Manager -> Config -> Text -> IO (ApiResponse a)
+getDocType manager config id = do
+  request <- createRequest config (getResourcePath (Proxy @a) <> "/" <> id) "GET"
+  response <- Network.HTTP.Client.httpLbs request manager
+  return $ parseGetResponse response
 
 {- | Delete a named object.
 
@@ -43,41 +56,59 @@ A customer can be deleted like this:
 res <- deleteDocType config "<customer name>" (Proxy :: Proxy Customer)
 @
 -}
-deleteDocType :: forall a. (IsDocType a)
-              => Config -> Text -> Data.Proxy.Proxy a -> IO (ApiResponse Bool)
-deleteDocType _ _ _ = error "implement"
--- note: return type is actually just {"message":"ok"}
+deleteDocType :: forall a. (IsDocType a) => Manager -> Config -> Text -> IO (ApiResponse ())
+deleteDocType manager config name = do
+  request <- createRequest config (getResourcePath (Proxy @a) <> "/" <> name) "DELETE"
+  response <- Network.HTTP.Client.httpLbs request manager
+  return $ parseDeleteResponse response
 
 postDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
             => Config -> a -> IO (ApiResponse a)
 postDocType _ _ = error "implement"
 
-putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
-           => Config -> Text -> a -> IO (ApiResponse a)
-putDocType _ _ _ = error "implement"
+putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a) => Manager -> Config -> Text -> a -> IO (ApiResponse a)
+putDocType manager config name doc = do
+  let path = getResourcePath (Proxy @a) <> "/" <> name
+  request <- createRequestWithBody config path "PUT" doc
+  response <- Network.HTTP.Client.httpLbs request manager
+  return $ parseGetResponse response
+
 
 mkConfig :: Text -> Text -> Secret -> Config
 mkConfig baseUrl apiKey apiSecret = Config
   { baseUrl = baseUrl
   , apiKey = apiKey
   , apiSecret = apiSecret
-  , tlsSettings = defaultManagerSettings
   }
-
--- | Update 'Config' and set user-provided TLS settings.
-withTlsSettings :: Config -> ManagerSettings -> Config
-withTlsSettings c x = c { tlsSettings = x }
 
 -- | Create the API secret used together with the API key for authorization.
 mkSecret :: Text -> Secret
 mkSecret = Secret
+
+
+-- | Create the API Request.
+createRequest :: Config -> Text -> BS.ByteString -> IO Request
+createRequest config path method = do
+  request <- parseRequest $ unpack (baseUrl config <> path)
+  return request
+    { method = method
+    , requestHeaders = [mkAuthHeader config]
+    }
+
+createRequestWithBody :: ToJSON a => Config -> Text -> BS.ByteString -> a -> IO Request
+createRequestWithBody config path method doc = do
+  request <- parseRequest $ unpack (baseUrl config <> path)
+  return request
+    { method = method
+    , requestHeaders = mkAuthHeader config : [(hContentType, encodeUtf8 "application/json")]
+    , requestBody = RequestBodyLBS (encode doc)
+    }
 
 -- | API client configuration.
 data Config = Config
   { baseUrl :: Text
   , apiKey :: Text
   , apiSecret :: Secret
-  , tlsSettings :: ManagerSettings
   }
 
 -- | Opaque type to store the API secret.
@@ -85,13 +116,47 @@ data Secret = Secret
   { getSecret :: Text
   }
 
--- TODO: Placeholder
--- TODO: Maybe rename type to make it more abstract (not tied to the URL query string)?
--- TODO: Maybe change type or make opaque type to prevent invalid combinations?
-data QueryStringParam = Asc Text | Desc Text | Fields [Text]
+data DataWrapper a = DataWrapper { getData :: a }
+  deriving Show
 
--- TODO: the response should also contain: the full JSON Value
--- (esp. in the error case), the raw response in case the response
--- cannot be parsed, the http response incl. http status code (this
--- probably makes the raw text accessible)
-data ApiResponse a = Ok a Value | Error HttpResponse (Maybe Value)
+instance FromJSON a => FromJSON (DataWrapper a) where
+  parseJSON = withObject "DataWrapper" $ \obj -> do
+    dataValue <- obj .: "data"
+    return (DataWrapper dataValue)
+
+data ApiResponse a =
+    Ok
+     { getResponse :: Response LBS.ByteString
+     , getResult :: a
+     , getJsonValue :: Value
+     }
+  | Err
+     { getResponse :: Response LBS.ByteString
+     , getMaybeJsonValue :: Maybe (Value, Text)
+     }
+  deriving Show
+
+mkAuthHeader :: Config -> Header
+mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
+                          in (hAuthorization, encodeUtf8 $ "token " <> authToken)
+
+parseGetResponse :: forall a. FromJSON a => Response LBS.ByteString -> ApiResponse a
+parseGetResponse response =
+  case decode @Value (responseBody response) of
+    Just value -> case fromJSON value :: Result (DataWrapper a) of
+      Success result -> Ok response (getData result) value
+      Error err -> Err response (Just (value, pack err))
+    Nothing -> Err response Nothing
+
+parseDeleteResponse :: Response LBS.ByteString -> ApiResponse ()
+parseDeleteResponse response =
+  case decode @Value (responseBody response) of
+    Just value -> case fromJSON value :: Result (DataWrapper Text) of
+      Success (DataWrapper message)
+        | message == "ok" -> Ok response () value
+        | otherwise -> Err response (Just (value, message))
+      Error err -> Err response (Just (value, pack err))
+    Nothing -> Err response Nothing
+
+getResourcePath :: forall a. IsDocType a => Proxy a -> Text
+getResourcePath _ = "/resource/" <> urlEncode (docTypeName @a)

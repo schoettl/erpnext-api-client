@@ -18,10 +18,17 @@ extra-source-files:  README.md
 library
   hs-source-dirs:      src
   exposed-modules:     ERPNext.Client
+                     , ERPNext.Client.Helper
+                     , ERPNext.Client.Filters
+                     , ERPNext.Client.QueryStringParams
   build-depends:       base >= 4.7 && < 5
                      , http-client
+                     , http-types
                      , text
                      , aeson
+                     , time
+                     , network-uri
+                     , bytestring
   default-language:    GHC2021
   ghc-options:         -Wall
                        -Wcompat

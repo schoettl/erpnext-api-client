@@ -17,7 +17,7 @@ The [[https://docs.frappe.io/framework/user/en/api/rest][ERPNext REST
 API]] basically has seven types of requests covering CRUD operations,
 remote method calls, and file uploads.
 
-For CRUD operations on a given DocType there are:
+CRUD operations on a given DocType are:
 
 - =GET= list of all documents of a DocType (=getDocTypeList=)
 - =POST= to create a new document (=postDocType=)
@@ -32,12 +32,13 @@ why this library does not come with any predefined types for DocTypes.
 Instead, users can provide their own types with only the fields they
 need.
 
-This library provides tooling to generate Haskell record types from a
-simple DSL to define DocTypes (very similar to
-[[https://hackage.haskell.org/package/persistent/docs/Database-Persist-Quasi.html][persistent's
-model definition syntax]]).
+This library also provides tooling to generate Haskell record types
+for DocTypes from a simple DSL (see section below).
 
 ** Usage
+
+This sample code makes a GET request for a named document of the
+given DocType.
 
 # Create example file from emacs with: org-babel-tangle
 
@@ -72,3 +73,90 @@ model definition syntax]]).
 #+end_src
 
 #+RESULTS:
+
+** Scope and Limits
+
+- Only [[https://docs.frappe.io/framework/user/en/api/rest#1-token-based-authentication][token-based authentication]] is supported.
+- [[https://docs.frappe.io/framework/user/en/api/rest#remote-method-calls][Remote Method Calls]] are not yet supported.
+- [[https://docs.frappe.io/framework/user/en/api/rest#file-uploads][File Uploads]] are not yet supported.
+
+** Data records for DocTypes
+
+Haskell record types for the DocTypes can be coded by hand which
+requires some boiler plate like Aeson instances, handling =null= or
+missing values, and writing helper functions like =mkCustomer=.
+
+This library provides tooling to generate Haskell record types from a
+simple DSL very similar to
+[[https://hackage.haskell.org/package/persistent/docs/Database-Persist-Quasi.html][persistent's model definition syntax]].
+
+1. A script generates an [[https://swagger.io/specification/][OpenAPI Specification]] file in =yaml= format.
+2. The [[https://github.com/Haskell-OpenAPI-Code-Generator/Haskell-OpenAPI-Client-Code-Generator/][Haskell-OpenAPI-Client-Code-Generator]] generates an Haskell API
+   client, from which only the type definitions can be used.
+
+The resulting files are a separate Haskell package which can be added
+as dependency. The resulting record types can be used together with
+this API client but the =IsDocType= instance must still be defined by hand.
+
+**The API client part generated from the OpenAPI spec can not be used.**
+
+#+begin_example
+$ ./scripts/gen-openapi-yaml.sh erpnext/models > openapi.yaml
+$ openapi3-code-generator-exe \
+    --specification openapi.yaml \
+    --package-name erpnext-api-client-models \
+    --module-name ERPNextAPI \
+    --force --output-dir api-client/
+$ tree api-client/
+api-client/
+├── erpnext-api-client-models.cabal
+├── src
+│   ├── ERPNextAPI
+│   │   ├── Common.hs
+│   │   ├── Configuration.hs
+│   │   ├── Operations
+│   │   │   └── DummyOperation.hs
+│   │   ├── SecuritySchemes.hs
+│   │   ├── TypeAlias.hs
+│   │   ├── Types     <---- here are the generated types
+│   │   │   ├── Customer.hs
+│   │   │   ├── Order.hs
+│   │   │   ├── Supplier.hs
+│   │   └── Types.hs
+│   └── ERPNextAPI.hs
+├── stack.yaml
+└── stack.yaml.lock
+#+end_example
+
+** Note on TLS problems
+
+If you're running ERPNext in your test environment, chances are that your
+server does not have a valid TLS certificate signed by a trusted CA.
+
+In this case you can configure the HTTP connection manager's TLS
+settings like this:
+
+#+begin_src haskell
+  import Network.HTTP.Client
+  import Network.HTTP.Client.TLS (mkManagerSettings)
+  import Network.Connection (TLSSettings (..))
+
+  …
+
+  let tlsSettings =
+        mkManagerSettings
+          ( TLSSettingsSimple
+              { settingDisableCertificateValidation = True
+              , settingDisableSession = False
+              , settingUseServerName = False
+              }
+          )
+          Nothing
+  manager <- Network.HTTP.Client.newManager tlsSettings
+  …
+#+end_src
+
+#+begin_src sh
+  stack runhaskell --package crypton-connection --package http-client-tls example1.hs
+#+end_src
+
