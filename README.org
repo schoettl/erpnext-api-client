@@ -17,7 +17,7 @@ The [[https://docs.frappe.io/framework/user/en/api/rest][ERPNext REST
 API]] basically has seven types of requests covering CRUD operations,
 remote method calls, and file uploads.
 
-For CRUD operations on a given DocType there are:
+CRUD operations on a given DocType are:
 
 - =GET= list of all documents (=getDocTypeList=)
 - =POST= to create a new document (=postDocType=)
@@ -32,11 +32,8 @@ why this library does not come with any predefined types for DocTypes.
 Instead, users can provide their own types with only the fields they
 need.
 
-This library provides tooling to generate Haskell record types from a
-simple DSL to define DocTypes (very similar to
-[[https://hackage.haskell.org/package/persistent/docs/Database-Persist-Quasi.html][persistent's
-model definition syntax]]).
-See section below.
+This library also provides tooling to generate Haskell record types
+for DocTypes from a simple DSL (see section below).
 
 ** Usage
 
@@ -86,20 +83,21 @@ main = do
 
 Haskell record types for the DocTypes can be coded by hand which
 requires some boiler plate like Aeson instances, handling =null= or
-missing values, writing functions like =mkCustomer= with only required
-fields for default values, etc.
+missing values, and writing helper functions like =mkCustomer=.
 
 This library provides tooling to generate Haskell record types from a
-simple DSL to define DocTypes (very similar to
-[[https://hackage.haskell.org/package/persistent/docs/Database-Persist-Quasi.html][persistent's model definition syntax]]).
+simple DSL very similar to
+[[https://hackage.haskell.org/package/persistent/docs/Database-Persist-Quasi.html][persistent's model definition syntax]].
 
-1. A script generates an [[https://swagger.io/specification/][OpenAPI Specification]] in =yaml= format.
+1. A script generates an [[https://swagger.io/specification/][OpenAPI Specification]] file in =yaml= format.
 2. The [[https://github.com/Haskell-OpenAPI-Code-Generator/Haskell-OpenAPI-Client-Code-Generator/][Haskell-OpenAPI-Client-Code-Generator]] generates an Haskell API
    client, from which only the type definitions can be used.
 
 The resulting files are a separate Haskell package which can be added
 as dependency. The resulting record types can be used together with
 this API client but the =IsDocType= instance must still be defined by hand.
+
+**The API client part generated from the OpenAPI spec can not be used.**
 
 #+begin_example
 $ ./scripts/gen-openapi-yaml.sh erpnext/models > openapi.yaml
@@ -131,7 +129,7 @@ api-client/
 
 ** Note on TLS problems
 
-If you run ERPNext on your test environment, chances are that your
+If you're running ERPNext in your test environment, chances are that your
 server does not have a valid TLS certificate signed by a trusted CA.
 
 In this case you can configure the HTTP connection manager's TLS
@@ -141,6 +139,8 @@ settings like this:
   import Network.HTTP.Client
   import Network.HTTP.Client.TLS (mkManagerSettings)
   import Network.Connection (TLSSettings (..))
+
+  …
 
   let tlsSettings =
         mkManagerSettings
@@ -152,6 +152,7 @@ settings like this:
           )
           Nothing
   manager <- Network.HTTP.Client.newManager tlsSettings
+  …
 #+end_src
 
 #+begin_src sh
