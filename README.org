@@ -102,7 +102,7 @@ this API client but the =IsDocType= instance must still be defined by hand.
 **The API client part generated from the OpenAPI spec can not be used.**
 
 #+begin_example
-$ ./scripts/gen-openapi-yaml.sh erpnext/models > openapi.yaml
+$ ./scripts/gen-openapi-yaml.sh models > openapi.yaml
 $ openapi3-code-generator-exe \
     --specification openapi.yaml \
     --package-name erpnext-api-client-models \
