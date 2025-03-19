@@ -35,14 +35,16 @@ class IsDocType a where
   docTypeName :: Text
   -- TODO: implement auto-derive (using typename and generic)?
 
-getDocTypeList :: forall a. (IsDocType a, FromJSON a) => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
+getDocTypeList :: forall a. (IsDocType a, FromJSON a)
+               => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
 getDocTypeList manager config qsParams = do
   let path = getResourcePath @a <> "?" <> renderQueryStringParams qsParams
   request <- createRequest config path "GET"
   response <- httpLbs request manager
   return $ parseGetResponse response
 
-getDocType :: forall a. (IsDocType a, FromJSON a) => Manager -> Config -> Text -> IO (ApiResponse a)
+getDocType :: forall a. (IsDocType a, FromJSON a)
+           => Manager -> Config -> Text -> IO (ApiResponse a)
 getDocType manager config id = do
   let path = getResourcePath @a <> "/" <> id
   request <- createRequest config path "GET"
@@ -58,7 +60,8 @@ A customer can be deleted like this:
 res <- deleteDocType @Customer manager config "<customer name>"
 @
 -}
-deleteDocType :: forall a. (IsDocType a) => Manager -> Config -> Text -> IO (ApiResponse ())
+deleteDocType :: forall a. (IsDocType a)
+              => Manager -> Config -> Text -> IO (ApiResponse ())
 deleteDocType manager config name = do
   let path = getResourcePath @a <> "/" <> name
   request <- createRequest config path "DELETE"
@@ -73,7 +76,8 @@ postDocType manager config doc = do
   response <- httpLbs request manager
   return $ parseGetResponse response
 
-putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a) => Manager -> Config -> Text -> a -> IO (ApiResponse a)
+putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
+           => Manager -> Config -> Text -> a -> IO (ApiResponse a)
 putDocType manager config name doc = do
   let path = getResourcePath @a <> "/" <> name
   request <- createRequestWithBody config path "PUT" doc
