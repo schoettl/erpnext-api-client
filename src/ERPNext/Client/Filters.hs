@@ -7,11 +7,12 @@ module ERPNext.Client.Filters
   , renderFilters
   ) where
 
-import Data.Text (Text, filter, intercalate, pack, unpack)
+import Data.Text (Text, intercalate, pack)
 import Data.Time.Calendar (Day)
-import Network.URI (escapeURIString, isUnreserved)
-import Prelude hiding (filter)
+import ERPNext.Client.Helper (urlEncode, quote)
+import Prelude
 
+-- TODO: refactor this? rename to filter and parameterize each term with fieldname and value?
 data FilterOperator
   = Eq
   | NotEq
@@ -43,12 +44,6 @@ data Filter = Filter
   , filterValue :: FilterValue
   }
   deriving (Show, Eq)
-
-sanitizeQuotes :: Text -> Text
-sanitizeQuotes = filter (/= '"')
-
-quote :: Text -> Text
-quote t = "\"" <> sanitizeQuotes t <> "\""
 
 renderFilterOperator :: FilterOperator -> Text
 renderFilterOperator op =
@@ -87,13 +82,10 @@ renderFilter f =
     <> renderFilterValue (filterValue f)
     <> "]"
 
-urlEncodeValue :: Text -> Text
-urlEncodeValue = pack . escapeURIString isUnreserved . unpack
-
 renderFilters :: Text -> [Filter] -> Text
 renderFilters prefix filters =
   let
     encoded = map renderFilter filters
     str = "[" <> intercalate ", " encoded <> "]"
   in
-    prefix <> "=" <> urlEncodeValue str
+    prefix <> "=" <> urlEncode str

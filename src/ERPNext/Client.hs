@@ -26,6 +26,7 @@ import Data.Proxy
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import ERPNext.Client.QueryStringParams
+import ERPNext.Client.Helper (urlEncode)
 import Prelude
 
 -- | Type class for types which represent an ERPNext DocType.
@@ -157,4 +158,4 @@ parseDeleteResponse response =
     Nothing -> Err response Nothing
 
 getResourcePath :: forall a. IsDocType a => Proxy a -> Text
-getResourcePath _ = "/resource/" <> docTypeName @a
+getResourcePath _ = "/resource/" <> urlEncode (docTypeName @a)
