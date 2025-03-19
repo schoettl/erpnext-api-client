@@ -7,9 +7,9 @@ module ERPNext.Client.Filters
   , renderFilters
   ) where
 
-import Data.Text (Text, intercalate, pack)
+import Data.Text (Text, intercalate)
 import Data.Time.Calendar (Day)
-import ERPNext.Client.Helper (urlEncode, quote)
+import ERPNext.Client.Helper (urlEncode, quote, tshow)
 import Prelude
 
 -- TODO: refactor this? rename to filter and parameterize each term with fieldname and value?
@@ -65,10 +65,10 @@ renderFilterValue :: FilterValue -> Text
 renderFilterValue fv =
   case fv of
     FilterText t -> quote t
-    FilterNumber n -> pack (show n)
+    FilterNumber n -> tshow n
     FilterBool b -> if b then "1" else "0"
     FilterList vs -> "[" <> intercalate ", " (map renderFilterValue vs) <> "]"
-    FilterDay d -> quote (pack (show d))
+    FilterDay d -> quote (tshow d)
     FilterNull -> quote "not set"
     FilterNotNull -> quote "set"
 

@@ -3,6 +3,7 @@
 module ERPNext.Client.Helper
   ( urlEncode
   , quote
+  , tshow
   ) where
 
 import Data.Text
@@ -17,4 +18,7 @@ sanitizeQuotes = T.filter (/= '"')
 
 quote :: Text -> Text
 quote t = "\"" <> sanitizeQuotes t <> "\""
+
+tshow :: Show a => a -> Text
+tshow = pack . show
 
