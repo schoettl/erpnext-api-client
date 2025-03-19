@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module ERPNext.Client 
+module ERPNext.Client
   ( getDocTypeList
   , getDocType
   , postDocType
@@ -18,12 +18,13 @@ module ERPNext.Client
   ) where
 
 import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest, RequestBody (..))
-import Network.HTTP.Types.Header (hAuthorization, Header)
+import Network.HTTP.Types (hAuthorization, hContentType, Header)
 import Data.Text hiding (map)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
 import Data.Proxy
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as LBS
 import ERPNext.Client.QueryStringParams
 import Prelude
 
@@ -53,7 +54,7 @@ A customer can be deleted like this:
 res <- deleteDocType config "<customer name>" (Proxy :: Proxy Customer)
 @
 -}
-deleteDocType :: forall a. (IsDocType a) => Manager -> Config -> Text -> IO (ApiResponse Bool)
+deleteDocType :: forall a. (IsDocType a) => Manager -> Config -> Text -> IO (ApiResponse ())
 deleteDocType manager config name = do
   request <- createRequest config (getResourcePath (Proxy @a) <> "/" <> name) "DELETE"
   response <- Network.HTTP.Client.httpLbs request manager
@@ -66,7 +67,7 @@ postDocType _ _ = error "implement"
 putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a) => Manager -> Config -> Text -> a -> IO (ApiResponse a)
 putDocType manager config name doc = do
   let path = getResourcePath (Proxy @a) <> "/" <> name
-  request <- createRequestWithBody config path doc "PUT"
+  request <- createRequestWithBody config path "PUT" doc
   response <- Network.HTTP.Client.httpLbs request manager
   return $ parseGetResponse response
 
@@ -84,20 +85,20 @@ mkSecret = Secret
 
 
 -- | Create the API Request.
-createRequest :: Config -> Text -> Text -> IO Request
+createRequest :: Config -> Text -> BS.ByteString -> IO Request
 createRequest config path method = do
   request <- parseRequest $ unpack (baseUrl config <> path)
   return request
-    { method = encodeUtf8 method
-    , requestHeaders = mkHeader config
+    { method = method
+    , requestHeaders = [mkAuthHeader config]
     }
 
-createRequestWithBody :: (ToJSON a) => Config -> Text -> a -> Text -> IO Request
-createRequestWithBody config path doc method = do
+createRequestWithBody :: ToJSON a => Config -> Text -> BS.ByteString -> a -> IO Request
+createRequestWithBody config path method doc = do
   request <- parseRequest $ unpack (baseUrl config <> path)
   return request
-    { method = encodeUtf8 method
-    , requestHeaders = mkHeader config
+    { method = method
+    , requestHeaders = mkAuthHeader config : [(hContentType, encodeUtf8 "application/json")]
     , requestBody = RequestBodyLBS (encode doc)
     }
 
@@ -121,39 +122,38 @@ instance FromJSON a => FromJSON (DataWrapper a) where
     dataValue <- obj .: "data"
     return (DataWrapper dataValue)
 
--- TODO: the response should also contain: the full JSON Value
--- (esp. in the error case), the raw response in case the response
--- cannot be parsed, the http response incl. http status code (this
--- probably makes the raw text accessible)
 data ApiResponse a =
     Ok
-     { getResponse :: Response ByteString
+     { getResponse :: Response LBS.ByteString
      , getResult :: a
      , getJsonValue :: Value
      }
   | Err
-     { getResponse :: Response ByteString
-     , getMaybeJsonValueErr :: Maybe Value
+     { getResponse :: Response LBS.ByteString
+     , getMaybeJsonValue :: Maybe (Value, Text)
      }
   deriving Show
 
-mkHeader :: Config -> [Header]
-mkHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
-                          in [(hAuthorization, encodeUtf8 $ "token " <> authToken), ("Content-Type", "application/json")]
+mkAuthHeader :: Config -> Header
+mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
+                          in (hAuthorization, encodeUtf8 $ "token " <> authToken)
 
-parseGetResponse :: forall a. FromJSON a => Response ByteString -> ApiResponse a
+parseGetResponse :: forall a. FromJSON a => Response LBS.ByteString -> ApiResponse a
 parseGetResponse response =
-  case eitherDecode @Value (responseBody response) of
-    Left _ -> Err response Nothing
-    Right value -> case fromJSON value :: Result (DataWrapper a) of
+  case decode @Value (responseBody response) of
+    Just value -> case fromJSON value :: Result (DataWrapper a) of
       Success result -> Ok response (getData result) value
-      Error err -> Err response Nothing
+      Error err -> Err response (Just (value, pack err))
+    Nothing -> Err response Nothing
 
-parseDeleteResponse :: Response ByteString -> ApiResponse Bool
-parseDeleteResponse response = 
-  case decode (responseBody response) :: Maybe Value of
-    Just res -> if res == object ["data" .= ("ok" :: Text)] then Ok response True res
-                else Err response (Just res)
+parseDeleteResponse :: Response LBS.ByteString -> ApiResponse ()
+parseDeleteResponse response =
+  case decode @Value (responseBody response) of
+    Just value -> case fromJSON value :: Result (DataWrapper Text) of
+      Success (DataWrapper message)
+        | message == "ok" -> Ok response () value
+        | otherwise -> Err response (Just (value, message))
+      Error err -> Err response (Just (value, pack err))
     Nothing -> Err response Nothing
 
 getResourcePath :: forall a. IsDocType a => Proxy a -> Text

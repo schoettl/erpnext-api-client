@@ -1,6 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ERPNext.Client.Filters where
+module ERPNext.Client.Filters
+  ( Filter (..)
+  , FilterOperator (..)
+  , FilterValue (..)
+  , renderFilters
+  ) where
 
 import Data.Text (Text, filter, intercalate, pack, unpack)
 import Data.Time.Calendar (Day)

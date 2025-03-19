@@ -1,19 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ERPNext.Client.QueryStringParams where
+module ERPNext.Client.QueryStringParams
+  ( QueryStringParam (..)
+  , renderQueryStringParams
+  ) where
 
 import ERPNext.Client.Filters
 import Data.Text hiding (map)
 
-
--- TODO: Placeholder
--- TODO: Maybe rename type to make it more abstract (not tied to the URL query string)?
 -- TODO: Maybe change type or make opaque type to prevent invalid combinations?
-data QueryStringParam = Asc Text | Desc Text | Fields [Text] | AndFilter [Filter] | OrFilter [Filter]
+data QueryStringParam
+  = Asc Text
+  | Desc Text
+  | Fields [Text]
+  | AndFilter [Filter]
+  | OrFilter [Filter]
 
 renderQueryStringParam :: QueryStringParam -> Text
-renderQueryStringParam qsParam = 
+renderQueryStringParam qsParam =
   case qsParam of
+    -- TODO: implement
     Asc _ ->
       ""
     Desc _ ->
