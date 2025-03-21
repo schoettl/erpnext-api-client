@@ -40,10 +40,10 @@ import ERPNext.Client.QueryStringParams
 import ERPNext.Client.Helper (urlEncode)
 
 -- | Type class for types which represent an ERPNext DocType.
--- Each DocType has a unique name.
+-- Each DocType has a unique name but there can still be multiple
+-- „views“ (i.e. records types) for one DocType.
 class IsDocType a where
   docTypeName :: Text
-  -- TODO: implement auto-derive (using typename and generic)?
 
 {-|
   Get a list of all documents of a given DocType.
@@ -73,7 +73,7 @@ The phantom type parameter @a@ is used to figure out the DocType.
 A customer can be deleted like this:
 
 @
-res <- deleteDocType @Customer manager config "<customer name>"
+res \<- deleteDocType @Customer manager config "customer name"
 @
 -}
 deleteDocType :: forall a. (IsDocType a)
