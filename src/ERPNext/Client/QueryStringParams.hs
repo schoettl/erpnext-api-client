@@ -16,7 +16,7 @@ import Data.Text hiding (map)
 data QueryStringParam
   = Debug Bool -- ^ If 'True', makes API returning query analysis info instead of data
   | AsDict Bool -- ^ If 'False', makes API returning the data records as mixed-type arrays which cannot be parsed by this library (default: 'True')
-  | LimitStart Int -- ^ Page offset
+  | LimitStart Int -- ^ Page offset (starts at 0)
   | LimitPageLength Int -- ^ Page size
   | Asc Text -- ^ Ascending order by given field
   | Desc Text -- ^ Descending order by given field
@@ -29,7 +29,7 @@ renderQueryStringParam qsParam =
   case qsParam of
     Debug b -> "debug=" <> tshow b
     AsDict b -> "as_dict=" <> tshow b
-    LimitStart offset -> "limit_start=" <> tshow offset
+    LimitStart offset -> "limit_start=" <> tshow (max 0 offset)
     LimitPageLength n -> "limit=" <> tshow n -- it was limit_page_length up to v13
 
     Asc field ->
