@@ -99,7 +99,7 @@ The resulting files are a separate Haskell package which can be added
 as dependency. The resulting record types can be used together with
 this API client but the =IsDocType= instance must still be defined by hand.
 
-**The API client part generated from the OpenAPI spec can not be used.**
+*The API client part generated from the OpenAPI spec can not be used.*
 
 Example models file:
 
