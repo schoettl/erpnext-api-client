@@ -101,6 +101,21 @@ this API client but the =IsDocType= instance must still be defined by hand.
 
 **The API client part generated from the OpenAPI spec can not be used.**
 
+Example models file:
+
+#+begin_src plain :tangle models
+  SalesOrder
+    name Text
+    total Double
+    transaction_date Text
+    items [SalesOrderItem]
+    Required name
+
+  SalesOrderItem
+    name Text
+    Required name
+#+end_src
+
 #+begin_example
 $ ./scripts/gen-openapi-yaml.sh models > openapi.yaml
 $ openapi3-code-generator-exe \
@@ -120,13 +135,11 @@ api-client/
 │   │   ├── SecuritySchemes.hs
 │   │   ├── TypeAlias.hs
 │   │   ├── Types     <---- here are the generated types
-│   │   │   ├── Customer.hs
-│   │   │   ├── Order.hs
-│   │   │   ├── Supplier.hs
+│   │   │   ├── SalesOrder.hs
+│   │   │   ├── SalesOrderItem.hs
 │   │   └── Types.hs
 │   └── ERPNextAPI.hs
-├── stack.yaml
-└── stack.yaml.lock
+└── stack.yaml
 #+end_example
 
 ** Note on TLS problems
