@@ -2,6 +2,17 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{-|
+Description: Generic API client library for ERPNext
+
+This is a Haskell API client for ERPNext. It aims to be a light-weight
+library based on http-client and user-provided record types.
+
+API documentation:
+
+https://docs.frappe.io/framework/user/en/api/rest
+-}
+
 module ERPNext.Client
   ( getDocTypeList
   , getDocType
@@ -34,6 +45,11 @@ class IsDocType a where
   docTypeName :: Text
   -- TODO: implement auto-derive (using typename and generic)?
 
+{-|
+  Get a list of all documents of a given DocType.
+  The 'QueryStringParam's can select fields, filter, order, enable
+  paging, and more.
+-}
 getDocTypeList :: forall a. (IsDocType a, FromJSON a)
                => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
 getDocTypeList manager config qsParams = do
@@ -42,6 +58,7 @@ getDocTypeList manager config qsParams = do
   response <- httpLbs request manager
   return $ parseGetResponse response
 
+-- | Get a single document of a given DocType by name.
 getDocType :: forall a. (IsDocType a, FromJSON a)
            => Manager -> Config -> Text -> IO (ApiResponse a)
 getDocType manager config name = do
@@ -50,7 +67,7 @@ getDocType manager config name = do
   response <- httpLbs request manager
   return $ parseGetResponse response
 
-{- | Delete a named object.
+{- | Delete a single document of a given DocType by name.
 
 The phantom type parameter @a@ is used to figure out the DocType.
 A customer can be deleted like this:
@@ -67,6 +84,7 @@ deleteDocType manager config name = do
   response <- httpLbs request manager
   return $ parseDeleteResponse response
 
+-- | Create a new document of a given DocType.
 postDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
             => Manager -> Config -> a -> IO (ApiResponse a)
 postDocType manager config doc = do
@@ -75,6 +93,7 @@ postDocType manager config doc = do
   response <- httpLbs request manager
   return $ parseGetResponse response
 
+-- | Update a document of a given DocType by name.
 putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
            => Manager -> Config -> Text -> a -> IO (ApiResponse a)
 putDocType manager config name doc = do
@@ -83,7 +102,7 @@ putDocType manager config name doc = do
   response <- httpLbs request manager
   return $ parseGetResponse response
 
-
+-- | Create an API client configuration.
 mkConfig :: Text -> Text -> Secret -> Config
 mkConfig baseUrl apiKey apiSecret = Config
   { baseUrl = baseUrl
@@ -96,7 +115,7 @@ mkSecret :: Text -> Secret
 mkSecret = Secret
 
 
--- | Create the API Request.
+-- | Create the API 'Request'.
 createRequest :: Config -> Text -> BS.ByteString -> IO Request
 createRequest config path method = do
   request <- parseRequest $ unpack (baseUrl config <> path)
@@ -105,6 +124,7 @@ createRequest config path method = do
     , requestHeaders = [mkAuthHeader config]
     }
 
+-- | Create the API 'Request' with a JSON body.
 createRequestWithBody :: ToJSON a => Config -> Text -> BS.ByteString -> a -> IO Request
 createRequestWithBody config path method doc = do
   request <- parseRequest $ unpack (baseUrl config <> path)
@@ -126,6 +146,7 @@ data Secret = Secret
   { getSecret :: Text
   }
 
+-- | Data wrapper type just to parse the JSON returned by ERPNext.
 data DataWrapper a = DataWrapper { getData :: a }
   deriving Show
 
@@ -134,11 +155,20 @@ instance FromJSON a => FromJSON (DataWrapper a) where
     dataValue <- obj .: "data"
     return (DataWrapper dataValue)
 
+-- | The API response.
 data ApiResponse a
-  = Ok (Response LBS.ByteString) Value a
-  | Err (Response LBS.ByteString) (Maybe (Value, Text))
+  = Ok -- ^ The OK response.
+      (Response LBS.ByteString) -- ^ The server's full response including header information.
+      Value -- ^ The returned JSON.
+      a -- ^ The result parsed from the returned JSON.
+  | Err -- ^ The error response.
+      (Response LBS.ByteString) -- ^ The server's full response including header information.
+      (Maybe (Value, Text)) -- ^ If the response is valid JSON, 'Just' the returned JSON and
+                            -- the parse error message telling why 'Value' couldn't be parsed
+                            -- into @a@.
   deriving Show
 
+-- | Get the full response from the API response.
 getResponse :: ApiResponse a -> Response LBS.ByteString
 getResponse (Ok r _ _) = r
 getResponse (Err r _) = r

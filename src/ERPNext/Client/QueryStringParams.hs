@@ -14,15 +14,15 @@ import Data.Text hiding (map)
 -- TODO: Maybe change type or make opaque type to prevent invalid combinations?
 -- TODO: add variants for limit, offset, etc.?
 data QueryStringParam
-  = Debug Bool -- ^ if 'True', makes API returning query analysis info instead of data
-  | AsDict Bool -- ^ if 'False', makes API returning the data records as mixed-type arrays which cannot be parsed by this library (default: 'True')
-  | LimitStart Int -- ^ offset
-  | LimitPageLength Int -- ^ page size
-  | Asc Text
-  | Desc Text
-  | Fields [Text]
-  | AndFilter [Filter]
-  | OrFilter [Filter]
+  = Debug Bool -- ^ If 'True', makes API returning query analysis info instead of data
+  | AsDict Bool -- ^ If 'False', makes API returning the data records as mixed-type arrays which cannot be parsed by this library (default: 'True')
+  | LimitStart Int -- ^ Page offset
+  | LimitPageLength Int -- ^ Page size
+  | Asc Text -- ^ Ascending order by given field
+  | Desc Text -- ^ Descending order by given field
+  | Fields [Text] -- ^ Select fields
+  | AndFilter [Filter] -- ^ Filter terms combined with logical AND
+  | OrFilter [Filter] -- ^ Filter terms combined with logical OR
 
 renderQueryStringParam :: QueryStringParam -> Text
 renderQueryStringParam qsParam =
@@ -55,5 +55,6 @@ renderOrderBy :: Text -> Text -> Text
 renderOrderBy field order =
   "order_by=" <> urlEncode (field <> " " <> order)
 
+-- | Render the query string for the URL.
 renderQueryStringParams :: [QueryStringParam] -> Text
 renderQueryStringParams params = intercalate "&" (map renderQueryStringParam params)

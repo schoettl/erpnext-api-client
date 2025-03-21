@@ -81,6 +81,7 @@ renderFilter f =
     <> renderFilterValue (filterValue f)
     <> "]"
 
+-- | Render the filter terms for the URL query string.
 renderFilters :: Text -> [Filter] -> Text
 renderFilters prefix filters =
   let
