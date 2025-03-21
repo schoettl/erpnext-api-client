@@ -62,8 +62,18 @@ awk -f- <<'AWK' "$modelsFile"
       case "Text": type = "string"; break;
       case "String": type = "string"; break;
       case "Bool": type = "boolean"; break;
-      # TODO: use $ref to refer to other Model for nested objects as default case?
-      default: print "error: unsupported type: " $2 > "/dev/stderr"; exit 1
+      default:
+        # print "error: unsupported type: " $2 > "/dev/stderr"; exit 1
+        if ($2 !~ /^[[A-Z]/) {
+          print "error: type name must start with upper-case letter or '[': " $2 > "/dev/stderr"; exit 1
+        } else if ($2 ~ /\[.*\]/) {
+          type = "array"
+          nestedType = substr($2, 2, length($2) - 2)
+        } else {
+          type = "object"
+          nestedType = $2
+        }
+        break;
     }
     nullable = ($3 == "Maybe") ? "true" : "false"
     print "        " $1 ":"
@@ -71,6 +81,15 @@ awk -f- <<'AWK' "$modelsFile"
     print "          type: " type
     print "          readOnly: false"
     print "          nullable: " nullable
+    switch (type) {
+      case "array":
+        print "          items:"
+        print "            $ref: '#/" nestedType "'"
+        break
+      case "object":
+        print "          $ref: '#/" nestedType "'"
+        break
+    }
   }
 }
 AWK
