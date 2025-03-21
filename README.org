@@ -65,7 +65,7 @@ given DocType.
     manager <- newManager defaultManagerSettings
     response <- getDocType manager config "Company A" :: IO (ApiResponse Customer)
     case response of
-      Ok _ c _ -> putStrLn $ name c
+      Ok _ _ c -> putStrLn $ name c
       Err r _ -> print r
 #+end_src
 
