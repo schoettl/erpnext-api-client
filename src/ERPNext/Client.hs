@@ -15,6 +15,7 @@ module ERPNext.Client
   , Secret ()
   , QueryStringParam (..)
   , ApiResponse (..)
+  , getResponse
   ) where
 
 import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest, RequestBody (..))
@@ -22,12 +23,10 @@ import Network.HTTP.Types (hAuthorization, hContentType, Header)
 import Data.Text hiding (map)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
-import Data.Proxy
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import ERPNext.Client.QueryStringParams
 import ERPNext.Client.Helper (urlEncode)
-import Prelude
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name.
@@ -45,8 +44,8 @@ getDocTypeList manager config qsParams = do
 
 getDocType :: forall a. (IsDocType a, FromJSON a)
            => Manager -> Config -> Text -> IO (ApiResponse a)
-getDocType manager config id = do
-  let path = getResourcePath @a <> "/" <> id
+getDocType manager config name = do
+  let path = getResourcePath @a <> "/" <> name
   request <- createRequest config path "GET"
   response <- httpLbs request manager
   return $ parseGetResponse response
@@ -135,17 +134,14 @@ instance FromJSON a => FromJSON (DataWrapper a) where
     dataValue <- obj .: "data"
     return (DataWrapper dataValue)
 
-data ApiResponse a =
-    Ok
-     { getResponse :: Response LBS.ByteString
-     , getResult :: a
-     , getJsonValue :: Value
-     }
-  | Err
-     { getResponse :: Response LBS.ByteString
-     , getMaybeJsonValue :: Maybe (Value, Text)
-     }
+data ApiResponse a
+  = Ok (Response LBS.ByteString) Value a
+  | Err (Response LBS.ByteString) (Maybe (Value, Text))
   deriving Show
+
+getResponse :: ApiResponse a -> Response LBS.ByteString
+getResponse (Ok r _ _) = r
+getResponse (Err r _) = r
 
 mkAuthHeader :: Config -> Header
 mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
@@ -155,7 +151,7 @@ parseGetResponse :: forall a. FromJSON a => Response LBS.ByteString -> ApiRespon
 parseGetResponse response =
   case decode @Value (responseBody response) of
     Just value -> case fromJSON value :: Result (DataWrapper a) of
-      Success result -> Ok response (getData result) value
+      Success result -> Ok response value (getData result)
       Error err -> Err response (Just (value, pack err))
     Nothing -> Err response Nothing
 
@@ -164,7 +160,7 @@ parseDeleteResponse response =
   case decode @Value (responseBody response) of
     Just value -> case fromJSON value :: Result (DataWrapper Text) of
       Success (DataWrapper message)
-        | message == "ok" -> Ok response () value
+        | message == "ok" -> Ok response value ()
         | otherwise -> Err response (Just (value, message))
       Error err -> Err response (Just (value, pack err))
     Nothing -> Err response Nothing

@@ -10,7 +10,6 @@ module ERPNext.Client.Filters
 import Data.Text (Text, intercalate)
 import Data.Time.Calendar (Day)
 import ERPNext.Client.Helper (urlEncode, quote, tshow)
-import Prelude
 
 -- TODO: refactor this? rename to filter and parameterize each term with fieldname and value?
 data FilterOperator
