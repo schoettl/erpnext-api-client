@@ -30,7 +30,7 @@ renderQueryStringParam qsParam =
     Debug b -> "debug=" <> tshow b
     AsDict b -> "as_dict=" <> tshow b
     LimitStart offset -> "limit_start=" <> tshow (max 0 offset)
-    LimitPageLength n -> "limit=" <> tshow n -- it was limit_page_length up to v13
+    LimitPageLength n -> "limit=" <> tshow (max 0 n) -- it was named limit_page_length up to v13
 
     Asc field ->
       renderOrderBy field "asc"
