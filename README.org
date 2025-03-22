@@ -69,6 +69,8 @@ given DocType.
       Err r _ -> print r
 #+end_src
 
+Inside this repository directory you can run:
+
 #+begin_src sh
   stack runhaskell example1.hs
 #+end_src
@@ -169,6 +171,8 @@ settings like this:
   manager <- Network.HTTP.Client.newManager tlsSettings
   …
 #+end_src
+
+Edit the example code from the first section accordingly and run it with:
 
 #+begin_src sh
   stack runhaskell --package crypton-connection --package http-client-tls example1.hs
