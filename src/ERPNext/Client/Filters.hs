@@ -2,7 +2,7 @@
 
 module ERPNext.Client.Filters
   ( Filter (..)
-  , FilterOperator (..)
+  , Fieldname
   , FilterValue (..)
   , renderFilters
   ) where
@@ -11,20 +11,23 @@ import Data.Text (Text, intercalate)
 import Data.Time.Calendar (Day)
 import ERPNext.Client.Helper (urlEncode, quote, tshow)
 
--- TODO: refactor this? rename to filter and parameterize each term with fieldname and value?
-data FilterOperator
-  = Eq
-  | NotEq
-  | Greater
-  | GreaterOrEq
-  | Less
-  | LessOrEq
-  | Like
-  | NotLike
-  | In
-  | NotIn
-  | Between
-  | Is
+newtype Fieldname = Fieldname Text
+  deriving (Show, Eq)
+
+data Filter
+  = Eq Fieldname FilterValue
+  | NotEq Fieldname FilterValue
+  | Greater Fieldname FilterValue
+  | GreaterOrEq Fieldname FilterValue
+  | Less Fieldname FilterValue
+  | LessOrEq Fieldname FilterValue
+  | Like Fieldname FilterValue
+  | NotLike Fieldname FilterValue
+  | In Fieldname [FilterValue]
+  | NotIn Fieldname [FilterValue]
+  | Between Fieldname FilterValue
+  | IsNull Fieldname
+  | IsNotNull Fieldname
   deriving (Show, Eq)
 
 data FilterValue
@@ -33,32 +36,35 @@ data FilterValue
   | FilterBool Bool
   | FilterList [FilterValue]
   | FilterDay Day
-  | FilterNull -- Used only with Is
-  | FilterNotNull -- Used only with Is
   deriving (Show, Eq)
 
-data Filter = Filter
-  { filterField :: Text
-  , filterOperator :: FilterOperator
-  , filterValue :: FilterValue
-  }
-  deriving (Show, Eq)
+unwrap :: Fieldname -> Text
+unwrap (Fieldname fn) = fn
 
-renderFilterOperator :: FilterOperator -> Text
-renderFilterOperator op =
-  case op of
-    Eq -> "="
-    NotEq -> "!="
-    Greater -> ">"
-    GreaterOrEq -> ">="
-    Less -> "<"
-    LessOrEq -> "<="
-    Like -> "like"
-    NotLike -> "not like"
-    In -> "in"
-    NotIn -> "not in"
-    Between -> "between"
-    Is -> "is"
+renderFilter :: Filter -> Text
+renderFilter f =
+  case f of
+    Eq field val         -> render field "=" val
+    NotEq field val      -> render field "!=" val
+    Greater field val    -> render field ">" val
+    GreaterOrEq field val-> render field ">=" val
+    Less field val       -> render field "<" val
+    LessOrEq field val   -> render field "<=" val
+    Like field val       -> render field "like" val
+    NotLike field val    -> render field "not like" val
+    In field vals        -> render field "in" (FilterList vals)
+    NotIn field vals     -> render field "not in" (FilterList vals)
+    Between field val    -> render field "between" val
+    IsNull field         -> "[" <> quote (unwrap field) <> "," <> quote "is" <> "," <> quote "not set" <> "]"
+    IsNotNull field         -> "[" <> quote (unwrap field) <> "," <> quote "is" <> "," <> quote "set" <> "]"
+  where
+    render field op val =
+      "["
+        <> quote (unwrap field) <> ","
+        <> quote op <> ","
+        <> renderFilterValue val
+        <> "]"
+
 
 renderFilterValue :: FilterValue -> Text
 renderFilterValue fv =
@@ -68,18 +74,6 @@ renderFilterValue fv =
     FilterBool b -> if b then "1" else "0"
     FilterList vs -> "[" <> intercalate ", " (map renderFilterValue vs) <> "]"
     FilterDay d -> quote (tshow d)
-    FilterNull -> quote "not set"
-    FilterNotNull -> quote "set"
-
-renderFilter :: Filter -> Text
-renderFilter f =
-  "["
-    <> quote (filterField f)
-    <> ","
-    <> quote (renderFilterOperator (filterOperator f))
-    <> ","
-    <> renderFilterValue (filterValue f)
-    <> "]"
 
 -- | Render the filter terms for the URL query string.
 renderFilters :: Text -> [Filter] -> Text
