@@ -7,7 +7,7 @@ description:         This is a Haskell API client for ERPNext. It aims to be a l
 homepage:            https://github.com/schoettl/erpnext-api-client
 license:             MIT
 license-file:        LICENSE
-author:              Jakob Schöttl
+author:              Jakob Schöttl, Omar Elbeltagui
 maintainer:          jakob.schoettl@intensovet.de
 copyright:           2025 Intensovet GmbH
 category:            API
