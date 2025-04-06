@@ -42,10 +42,10 @@ renderQueryStringParam qsParam =
       renderFields fields
 
     AndFilter filters ->
-      renderFilters "filters" filters
+      "filters=" <> renderFilters filters
 
     OrFilter filters ->
-      renderFilters "or_filters" filters
+      "or_filters=" <> renderFilters filters
 
 renderFields :: [Text] -> Text
 renderFields fields =
