@@ -55,11 +55,11 @@ renderFilter f =
 
 renderWithValue :: Fieldname -> Text -> FilterValue -> Text
 renderWithValue field op val =
-  "[" <> quote (field) <> "," <> quote op <> "," <> renderFilterValue val <> "]"
+  "[" <> quote field <> "," <> quote op <> "," <> renderFilterValue val <> "]"
 
 renderWithText :: Fieldname -> Text -> Text -> Text
 renderWithText field op txt =
-  "[" <> quote (field) <> "," <> quote op <> "," <> quote txt <> "]"
+  "[" <> quote field <> "," <> quote op <> "," <> quote txt <> "]"
 
 
 renderFilterValue :: FilterValue -> Text
