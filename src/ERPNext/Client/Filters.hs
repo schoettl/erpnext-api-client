@@ -74,10 +74,10 @@ renderFilterValueList :: [FilterValue] -> Text
 renderFilterValueList fvl = "[" <> intercalate ", " (map renderFilterValue fvl) <> "]"
 
 -- | Render the filter terms for the URL query string.
-renderFilters :: Text -> [Filter] -> Text
-renderFilters prefix filters =
+renderFilters :: [Filter] -> Text
+renderFilters filters =
   let
     encoded = map renderFilter filters
     str = "[" <> intercalate ", " encoded <> "]"
   in
-    prefix <> "=" <> urlEncode str
+    urlEncode str
