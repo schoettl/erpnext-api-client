@@ -93,7 +93,8 @@ This library provides tooling to generate Haskell record types from a
 simple DSL very similar to
 [[https://hackage.haskell.org/package/persistent/docs/Database-Persist-Quasi.html][persistent's model definition syntax]].
 
-1. A script generates an [[https://swagger.io/specification/][OpenAPI Specification]] file in =yaml= format.
+1. A script generates an [[https://swagger.io/specification/][OpenAPI Specification]] file in =yaml= format
+   from your models file.
 2. The [[https://github.com/Haskell-OpenAPI-Code-Generator/Haskell-OpenAPI-Client-Code-Generator/][Haskell-OpenAPI-Client-Code-Generator]] generates an Haskell API
    client, from which only the type definitions can be used.
 
@@ -116,6 +117,19 @@ Example models file:
   SalesOrderItem
     name Text
     Required name
+
+  Item
+    item_code Text
+    item_name Text
+    item_group Text
+    default_warehouse Text
+    country_of_origin Text
+    disabled Int
+    is_purchase_item Int
+    is_sales_item Int
+    is_stock_item Int
+    stock_uom Text
+    Required item_code item_name is_purchase_item is_sales_item is_stock_item
 #+end_src
 
 #+begin_example
@@ -139,10 +153,29 @@ api-client/
 │   │   ├── Types     <---- here are the generated types
 │   │   │   ├── SalesOrder.hs
 │   │   │   ├── SalesOrderItem.hs
+│   │   │   ├── Item.hs
 │   │   └── Types.hs
 │   └── ERPNextAPI.hs
 └── stack.yaml
 #+end_example
+
+To include the generated model types in your stack project:
+
+Add to your =stack.yaml=:
+
+: extra-deps:
+: - …
+: - ./api-client/
+
+In your =package.yaml=:
+
+: dependencies:
+: - …
+: - erpnext-api-client-models
+
+In your Haskell code:
+
+: import ERPNextAPI.Types
 
 ** Note on TLS problems
 
