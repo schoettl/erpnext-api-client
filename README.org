@@ -163,8 +163,6 @@ settings like this:
         mkManagerSettings
           ( TLSSettingsSimple
               { settingDisableCertificateValidation = True
-              , settingDisableSession = False
-              , settingUseServerName = False
               }
           )
           Nothing
