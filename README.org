@@ -175,7 +175,20 @@ In your =package.yaml=:
 
 In your Haskell code:
 
-: import ERPNextAPI.Types
+#+begin_src haskell
+  import ERPNext.Client -- the erpnext-api-client
+  import ERPNextAPI.Types -- the generated types
+
+  …
+
+  -- And here some orphan instances:
+
+  instance IsDocType SalesOrder where
+    docTypeName = "Sales Order"
+
+  instance IsDocType Customer where
+    docTypeName = "Customer"
+#+end_src
 
 ** Note on TLS problems
 
