@@ -11,8 +11,7 @@ import Data.Text (Text, intercalate)
 import Data.Time.Calendar (Day)
 import ERPNext.Client.Helper (urlEncode, quote, tshow)
 
-newtype Fieldname = Fieldname Text
-  deriving (Show, Eq)
+type Fieldname = Text
 
 data Filter
   = Eq Fieldname FilterValue
@@ -38,9 +37,6 @@ data FilterValue
   | FilterDay Day
   deriving (Show, Eq)
 
-unwrap :: Fieldname -> Text
-unwrap (Fieldname fn) = fn
-
 renderFilter :: Filter -> Text
 renderFilter f =
   case f of
@@ -55,12 +51,12 @@ renderFilter f =
     In field vals        -> render field "in" (FilterList vals)
     NotIn field vals     -> render field "not in" (FilterList vals)
     Between field val    -> render field "between" val
-    IsNull field         -> "[" <> quote (unwrap field) <> "," <> quote "is" <> "," <> quote "not set" <> "]"
-    IsNotNull field         -> "[" <> quote (unwrap field) <> "," <> quote "is" <> "," <> quote "set" <> "]"
+    IsNull field         -> "[" <> quote field <> "," <> quote "is" <> "," <> quote "not set" <> "]"
+    IsNotNull field         -> "[" <> quote field <> "," <> quote "is" <> "," <> quote "set" <> "]"
   where
     render field op val =
       "["
-        <> quote (unwrap field) <> ","
+        <> quote field <> ","
         <> quote op <> ","
         <> renderFilterValue val
         <> "]"
