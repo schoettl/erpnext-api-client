@@ -6,7 +6,7 @@ module ERPNext.Client.QueryStringParams
   ) where
 
 import ERPNext.Client.Filters
-import ERPNext.Client.Helper (urlEncode, quote, tshow)
+import ERPNext.Client.Helper
 import Data.Text hiding (map)
 
 -- https://docs.frappe.io/framework/user/en/api/rest
@@ -33,13 +33,13 @@ renderQueryStringParam qsParam =
     LimitPageLength n -> "limit=" <> tshow (max 0 n) -- it was named limit_page_length up to v13
 
     Asc field ->
-      renderOrderBy field "asc"
+      "order_by=" <> renderOrderBy field "asc"
 
     Desc field ->
-      renderOrderBy field "desc"
+      "order_by=" <> renderOrderBy field "desc"
 
     Fields fields ->
-      renderFields fields
+      "fields=" <> renderFields fields
 
     AndFilter filters ->
       "filters=" <> renderFilters filters
@@ -47,13 +47,13 @@ renderQueryStringParam qsParam =
     OrFilter filters ->
       "or_filters=" <> renderFilters filters
 
-renderFields :: [Text] -> Text
+renderFields :: [Fieldname] -> Text
 renderFields fields =
-  "fields=" <> urlEncode ("[" <> intercalate "," (map quote fields) <> "]")
+  urlEncode ("[" <> intercalate "," (map quote fields) <> "]")
 
-renderOrderBy :: Text -> Text -> Text
+renderOrderBy :: Fieldname -> Text -> Text
 renderOrderBy field order =
-  "order_by=" <> urlEncode (field <> " " <> order)
+  urlEncode (field <> " " <> order)
 
 -- | Render the query string for the URL.
 renderQueryStringParams :: [QueryStringParam] -> Text

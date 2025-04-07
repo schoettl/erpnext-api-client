@@ -9,9 +9,7 @@ module ERPNext.Client.Filters
 
 import Data.Text (Text, intercalate)
 import Data.Time.Calendar (Day)
-import ERPNext.Client.Helper (urlEncode, quote, tshow)
-
-type Fieldname = Text
+import ERPNext.Client.Helper
 
 data Filter
   = Eq Fieldname FilterValue

@@ -4,11 +4,14 @@ module ERPNext.Client.Helper
   ( urlEncode
   , quote
   , tshow
+  , Fieldname
   ) where
 
 import Data.Text
 import Data.Text qualified as T
 import Network.URI (escapeURIString, isUnreserved)
+
+type Fieldname = Text
 
 -- | Percent-encode string for use in a URL.
 urlEncode :: Text -> Text
