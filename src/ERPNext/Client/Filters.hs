@@ -45,9 +45,9 @@ renderFilter f =
     LessOrEq field val   -> renderWithValue field "<=" val
     Like field val       -> renderWithValue field "like" val
     NotLike field val    -> renderWithValue field "not like" val
-    In field vals        -> renderWithText field "in" (renderFilterValueList vals)
-    NotIn field vals     -> renderWithText field "not in" (renderFilterValueList vals)
-    Between field val1 val2    -> renderWithText field "between" (renderFilterValueList [val1, val2])
+    In field vals        -> renderWithArray field "in" vals
+    NotIn field vals     -> renderWithArray field "not in" vals
+    Between field val1 val2    -> renderWithArray field "between" [val1, val2]
     IsNull field         -> renderWithText field "is" "not set"
     IsNotNull field      -> renderWithText field "is" "set"
 
@@ -59,6 +59,9 @@ renderWithText :: Fieldname -> Text -> Text -> Text
 renderWithText field op txt =
   "[" <> quote field <> "," <> quote op <> "," <> quote txt <> "]"
 
+renderWithArray :: Fieldname -> Text -> [FilterValue] -> Text
+renderWithArray field op vals =
+  "[" <>  quote field <> "," <>  quote op <> "," <> ("[" <> intercalate "," (map renderFilterValue vals) <> "]") <> "]"
 
 renderFilterValue :: FilterValue -> Text
 renderFilterValue fv =
@@ -68,14 +71,11 @@ renderFilterValue fv =
     FilterBool b -> if b then "1" else "0"
     FilterDay d -> quote (tshow d)
 
-renderFilterValueList :: [FilterValue] -> Text
-renderFilterValueList fvl = "[" <> intercalate ", " (map renderFilterValue fvl) <> "]"
-
 -- | Render the filter terms for the URL query string.
 renderFilters :: [Filter] -> Text
 renderFilters filters =
   let
     encoded = map renderFilter filters
-    str = "[" <> intercalate ", " encoded <> "]"
+    str = "[" <> intercalate "," encoded <> "]"
   in
     urlEncode str
