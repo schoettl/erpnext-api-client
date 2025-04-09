@@ -53,15 +53,19 @@ renderFilter f =
 
 renderWithValue :: Fieldname -> Text -> FilterValue -> Text
 renderWithValue field op val =
-  "[" <> quote field <> "," <> quote op <> "," <> renderFilterValue val <> "]"
+  renderTextArray [quote field, quote op, renderFilterValue val]
 
 renderWithText :: Fieldname -> Text -> Text -> Text
 renderWithText field op txt =
-  "[" <> quote field <> "," <> quote op <> "," <> quote txt <> "]"
+  renderTextArray [quote field, quote op, quote txt]
 
 renderWithArray :: Fieldname -> Text -> [FilterValue] -> Text
 renderWithArray field op vals =
-  "[" <>  quote field <> "," <>  quote op <> "," <> ("[" <> intercalate "," (map renderFilterValue vals) <> "]") <> "]"
+  renderTextArray [quote field, quote op, renderTextArray (map renderFilterValue vals)]
+
+renderTextArray :: [Text] -> Text
+renderTextArray xs =
+  "[" <> intercalate "," xs <> "]"
 
 renderFilterValue :: FilterValue -> Text
 renderFilterValue fv =
