@@ -15,7 +15,7 @@ type Fieldname = Text
 
 -- | Percent-encode string for use in a URL.
 urlEncode :: Text -> Text
-urlEncode = pack . escapeURIString isUnreserved . unpack
+urlEncode = pack . escapeURIString (\c -> isUnreserved c || T.elem c "[]\",=") . unpack
 
 sanitizeQuotes :: Text -> Text
 sanitizeQuotes = T.filter (/= '"')
