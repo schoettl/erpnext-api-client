@@ -23,6 +23,10 @@ main = do
       it "escapes even brackets" $ do
         renderQueryStringParams [Fields []] `shouldBe` "fields=%5B%5D"
    describe "ERPNext.Client.Helper" $ do
+    describe "urlEncode/urlDecode" $ do
+      it "is reversable" $ hedgehog $ do
+        t <- forAll $ Gen.text (Range.linear 0 100) Gen.unicode
+        (urlDecode . urlEncode) t === t
     describe "quote" $ do
       it "is always surrounded by double quotes" $ hedgehog $ do
         t <- forAll $ Gen.text (Range.linear 0 100) Gen.unicode
