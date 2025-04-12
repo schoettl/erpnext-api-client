@@ -9,15 +9,16 @@ module ERPNext.Client.Helper
   ) where
 
 import Data.Text
-import Data.Text qualified as T
 import Network.URI (escapeURIString, isUnreserved, unEscapeString)
 
+-- | Type for field names of DocTypes.
 type Fieldname = Text
 
 -- | Percent-encode string for use in a URL.
 urlEncode :: Text -> Text
 urlEncode = pack . escapeURIString isUnreserved . unpack
 
+-- | Opposite of 'urlEncode'.
 urlDecode :: Text -> Text
 urlDecode = pack . unEscapeString . unpack
 
