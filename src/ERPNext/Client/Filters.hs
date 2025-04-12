@@ -7,7 +7,7 @@ module ERPNext.Client.Filters
   , renderFilters
   ) where
 
-import Data.Text (Text, intercalate)
+import Data.Text (Text, intercalate, pack) -- pack is used in doctests!
 import Data.Time.Calendar (Day)
 import ERPNext.Client.Helper
 
@@ -76,6 +76,13 @@ renderFilterValue fv =
     FilterDay d -> quote (tshow d)
 
 -- | Render the filter terms for the URL query string.
+--
+-- >>> renderFilters [Eq (pack "idx") (FilterNumber 99)]
+-- "[[\"idx\",\"=\",99.0]]"
+--
+-- >>> renderFilters [IsNull (pack "status"), In (pack "name") [FilterText (pack "a"), FilterText (pack "b")]]
+-- "[[\"status\",\"is\",\"not%20set\"],[\"name\",\"in\",[\"a\",\"b\"]]]"
+--
 renderFilters :: [Filter] -> Text
 renderFilters filters =
   let

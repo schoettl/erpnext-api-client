@@ -56,5 +56,15 @@ renderOrderBy field order =
   urlEncode (field <> " " <> order)
 
 -- | Render the query string for the URL.
+--
+-- >>> renderQueryStringParams []
+-- ""
+--
+-- >>> renderQueryStringParams [LimitStart 20, LimitPageLength 10]
+-- "limit_start=20&limit=10"
+--
+-- >>> renderQueryStringParams [Fields [pack "id", pack "name"], Asc (pack "idx")]
+-- "fields=[\"id\",\"name\"]&order_by=idx%20asc"
+--
 renderQueryStringParams :: [QueryStringParam] -> Text
 renderQueryStringParams params = intercalate "&" (map renderQueryStringParam params)
