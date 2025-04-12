@@ -18,10 +18,9 @@ urlEncode :: Text -> Text
 urlEncode = pack . escapeURIString (\c -> isUnreserved c || T.elem c "[]\",=") . unpack
 
 sanitizeQuotes :: Text -> Text
-sanitizeQuotes = T.filter (/= '"')
+sanitizeQuotes = replace "\"" "\\\""
 
--- TODO: is it a good idea to just drop "?
--- | Double-quote string after dropping existing double quotes.
+-- | Double-quote string after backslash-escaping existing double quotes.
 quote :: Text -> Text
 quote t = "\"" <> sanitizeQuotes t <> "\""
 

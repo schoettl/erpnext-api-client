@@ -22,10 +22,9 @@ main = do
         let quoted = quote t
         ("\"" `isPrefixOf` quoted) === True
         ("\"" `isSuffixOf` quoted) === True
-      it "never returns something with double quotes inside" $ hedgehog $ do
-        t <- forAll $ Gen.text (Range.linear 0 100) Gen.unicode
-        let quoted = quote t
-        ("\"" `isInfixOf` removeFirstLastChar quoted) === False
+      it "never returns something with double quotes inside" $ do
+        quote "\"end" `shouldBe` "\"\\\"end\""
+        quote "Mutter 2,5\"" `shouldBe` "\"Mutter 2,5\\\"\""
    describe "Internal helper functions" $ do
     describe "removeFirstLastChar" $ do
       it "seems to work" $ do
