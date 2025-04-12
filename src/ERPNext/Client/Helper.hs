@@ -2,6 +2,7 @@
 
 module ERPNext.Client.Helper
   ( urlEncode
+  , urlDecode
   , quote
   , tshow
   , Fieldname
@@ -9,13 +10,16 @@ module ERPNext.Client.Helper
 
 import Data.Text
 import Data.Text qualified as T
-import Network.URI (escapeURIString, isUnreserved)
+import Network.URI (escapeURIString, isUnreserved, unEscapeString)
 
 type Fieldname = Text
 
 -- | Percent-encode string for use in a URL.
 urlEncode :: Text -> Text
-urlEncode = pack . escapeURIString (\c -> isUnreserved c || T.elem c "[]\",=") . unpack
+urlEncode = pack . escapeURIString isUnreserved . unpack
+
+urlDecode :: Text -> Text
+urlDecode = pack . unEscapeString . unpack
 
 sanitizeQuotes :: Text -> Text
 sanitizeQuotes = replace "\"" "\\\""

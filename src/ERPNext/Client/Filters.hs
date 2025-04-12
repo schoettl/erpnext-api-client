@@ -77,11 +77,11 @@ renderFilterValue fv =
 
 -- | Render the filter terms for the URL query string.
 --
--- >>> renderFilters [Eq (pack "idx") (FilterNumber 99)]
+-- >>> urlDecode $ renderFilters [Eq (pack "idx") (FilterNumber 99)]
 -- "[[\"idx\",\"=\",99.0]]"
 --
--- >>> renderFilters [IsNull (pack "status"), In (pack "name") [FilterText (pack "a"), FilterText (pack "b")]]
--- "[[\"status\",\"is\",\"not%20set\"],[\"name\",\"in\",[\"a\",\"b\"]]]"
+-- >>> urlDecode $ renderFilters [IsNull (pack "status"), In (pack "name") [FilterText (pack "a"), FilterText (pack "b")]]
+-- "[[\"status\",\"is\",\"not set\"],[\"name\",\"in\",[\"a\",\"b\"]]]"
 --
 renderFilters :: [Filter] -> Text
 renderFilters filters =
