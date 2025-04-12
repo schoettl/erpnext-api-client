@@ -11,8 +11,6 @@ import Data.Text hiding (map)
 
 -- https://docs.frappe.io/framework/user/en/api/rest
 
--- TODO: Maybe change type or make opaque type to prevent invalid combinations?
--- TODO: add variants for limit, offset, etc.?
 data QueryStringParam
   = Debug Bool -- ^ If 'True', makes API returning query analysis info instead of data
   | AsDict Bool -- ^ If 'False', makes API returning the data records as mixed-type arrays which cannot be parsed by this library (default: 'True')

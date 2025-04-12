@@ -1,7 +1,7 @@
 cabal-version:       3.6
 
 name:                erpnext-api-client
-version:             0.1.0.1
+version:             0.2.0.0
 synopsis:            Generic API client library for ERPNext
 description:         This is a Haskell API client for ERPNext. It aims to be a light-weight library based on http-client and user-provided record types.
 homepage:            https://github.com/schoettl/erpnext-api-client
