@@ -18,9 +18,9 @@ data QueryStringParam
   | AsDict Bool -- ^ If 'False', makes API returning the data records as mixed-type arrays which cannot be parsed by this library (default: 'True')
   | LimitStart Int -- ^ Page offset (starts at 0)
   | LimitPageLength Int -- ^ Page size
-  | Asc Text -- ^ Ascending order by given field
-  | Desc Text -- ^ Descending order by given field
-  | Fields [Text] -- ^ Select fields
+  | Asc Fieldname -- ^ Ascending order by given field
+  | Desc Fieldname -- ^ Descending order by given field
+  | Fields [Fieldname] -- ^ Select fields
   | AndFilter [Filter] -- ^ Filter terms combined with logical AND
   | OrFilter [Filter] -- ^ Filter terms combined with logical OR
 
