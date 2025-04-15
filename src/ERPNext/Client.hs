@@ -168,6 +168,11 @@ data ApiResponse a
                             -- into @a@.
   deriving Show
 
+instance Functor ApiResponse where
+  fmap f (Ok response val x) = Ok response val (f x)
+  fmap _ (Err response err)  = Err response err
+
+
 -- | Get the full response from the API response.
 getResponse :: ApiResponse a -> Response LBS.ByteString
 getResponse (Ok r _ _) = r
