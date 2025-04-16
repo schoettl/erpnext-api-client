@@ -168,6 +168,11 @@ data ApiResponse a
                             -- into @a@.
   deriving Show
 
+instance Eq a => Eq (ApiResponse a) where
+  Ok _ x y == Ok _ x' y'             =   x == x' && y == y'
+  Err _ (Just x)  == Err _ (Just x') =   x == x'
+  _ == _                             =   False
+
 instance Functor ApiResponse where
   fmap f (Ok response val x) = Ok response val (f x)
   fmap _ (Err response err)  = Err response err
