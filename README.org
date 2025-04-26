@@ -27,7 +27,7 @@ CRUD operations on a given DocType are:
 
 Note: Remote method calls and file uploads are not yet supported.
 
-DocTypes in ERPNext can be extended and newly created by users. This is
+In ERPNext, DocTypes can be extended and newly created by users. This is
 why this library does not come with any predefined types for DocTypes.
 Instead, users can provide their own types with only the fields they
 need.
@@ -55,7 +55,6 @@ given DocType.
     } deriving Generic
 
   instance FromJSON Customer
-  instance ToJSON Customer
   instance IsDocType Customer where
     docTypeName = "Customer"
 
