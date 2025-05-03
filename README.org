@@ -65,7 +65,7 @@ given DocType.
     response <- getDocType manager config "Company A" :: IO (ApiResponse Customer)
     case response of
       Ok _ _ c -> putStrLn $ name c
-      Err r _ -> print r
+      Err r _  -> putStrLn $ show r
 #+end_src
 
 Inside this repository directory you can run:
