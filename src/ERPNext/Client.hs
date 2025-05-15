@@ -225,7 +225,7 @@ But it can also combine all other API calls with a proper
 transformation @f@ and the use of 'mapM' for wrapping B.
 
 To use it as infix operator, you need to apply the transformation
-function @f@ to 'andThenWith' and bind it to a name like
+function @f@ to 'andThenWith' and bind that to a name like
 @andThenWithCustomerField@.
 
 Examples: TODO:untested
