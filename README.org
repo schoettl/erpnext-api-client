@@ -76,6 +76,37 @@ Inside this repository directory you can run:
 
 #+RESULTS:
 
+** Remote Method Calls
+
+#+begin_src haskell
+  getCallMethod  :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
+  postCallMethod :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
+#+end_src
+
+- get for read-only, post for methods with db writes
+- on python exception: =exc=, =exc_type=
+- on success: =message= containing return value as JSON response
+
+questions:
+
+1. reuse ApiResponse type? it currently doesn't handle exceptions
+   explicitly but it might be useful.
+2. how to pass args to method calls?
+3. how to pass the method name? =IsMethodCall[Result]= class? or explicitly?
+4. how to handle possible return value variants?
+   like ~data CallRes1 = Found Int | NotFound String~.
+   could be done by just 1 variant (and the models approach) with
+   null-able fields.
+
+proposals:
+
+1. pass method name explicitly
+2. reuse =ApiResponse= (no explicit handling of exceptions because
+   most exceptions are probably triggered by invalid params)
+3. no =IsMethodCall= class because there might often be primitive
+   return types like a number or a string. wrapping these with newtype
+   only to implement instances for them is too much.
+
 ** Scope and Limits
 
 - Only [[https://docs.frappe.io/framework/user/en/api/rest#1-token-based-authentication][token-based authentication]] is supported.
