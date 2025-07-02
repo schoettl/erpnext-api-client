@@ -103,7 +103,11 @@ putDocType manager config name doc = do
   return $ parseGetResponse response
 
 -- | Create an API client configuration.
-mkConfig :: Text -> Text -> Secret -> Config
+mkConfig
+  :: Text -- ^ The API base URL, e.g. @https://erpnext.example.com/api"@.
+  -> Text -- ^ The API key.
+  -> Secret -- ^ The API secret.
+  -> Config
 mkConfig baseUrl apiKey apiSecret = Config
   { baseUrl = baseUrl
   , apiKey = apiKey
