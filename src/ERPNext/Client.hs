@@ -144,11 +144,15 @@ data Config = Config
   , apiKey :: Text
   , apiSecret :: Secret
   }
+  deriving Show
 
 -- | Opaque type to store the API secret.
 data Secret = Secret
   { getSecret :: Text
   }
+
+instance Show Secret where
+  show _ = "*****"
 
 -- | Data wrapper type just to parse the JSON returned by ERPNext.
 data DataWrapper a = DataWrapper { getData :: a }
