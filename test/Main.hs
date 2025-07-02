@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import ERPNext.Client
 import ERPNext.Client.Helper
 import ERPNext.Client.QueryStringParams
 import Test.DocTest
@@ -48,6 +49,10 @@ main = do
         t <- forAll $ Gen.text (Range.linear 2 100) Gen.unicode
         let result = removeFirstLastChar t
         T.length result === T.length t - 2
+   describe "Secret doesn't expose itself with show" $ do
+     it "never shows" $ hedgehog $ do
+        t <- forAll $ Gen.text (Range.linear 2 100) Gen.unicode
+        show (mkSecret t) === "*****"
 
 removeFirstLastChar :: Text -> Text
 removeFirstLastChar = T.reverse . T.drop 1 . T.reverse . T.drop 1
