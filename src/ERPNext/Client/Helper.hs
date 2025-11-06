@@ -8,7 +8,7 @@ module ERPNext.Client.Helper
   , Fieldname
   ) where
 
-import Data.Text
+import Data.Text (Text, pack, unpack, replace)
 import Network.URI (escapeURIString, isUnreserved, unEscapeString)
 
 -- | Type for field names of DocTypes.
@@ -38,7 +38,8 @@ sanitizeQuotes = replace "\"" "\\\""
 quote :: Text -> Text
 quote t = "\"" <> sanitizeQuotes t <> "\""
 
--- | 'show' but return 'Text'.
+-- | 'show' but return 'Text'. text-2.1.2 adds a new function 'show'
+-- that could make this one redundant.
 tshow :: Show a => a -> Text
 tshow = pack . show
 
