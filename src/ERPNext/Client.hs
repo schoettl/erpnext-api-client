@@ -27,6 +27,7 @@ module ERPNext.Client
   , QueryStringParam (..)
   , ApiResponse (..)
   , getResponse
+  , andThenWith
   ) where
 
 import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest, RequestBody (..))
@@ -206,3 +207,51 @@ parseDeleteResponse response =
 
 getResourcePath :: forall a. IsDocType a => Text
 getResourcePath = "/resource/" <> urlEncode (docTypeName @a)
+
+{-|
+This function helps to sequentially execute two API calls A and B by
+passing some part of A's result to B. This can reduce the number of case
+expressions to one.
+
+@
+  TODO:untested
+  let andThen = andThenWith customer
+  (salesOrder', mCustomer') <- getDocType @SalesOrder mgr cfg "SAL-ORD-2025-00031"
+                                `andThen` getDocType @Customer mgr cfg
+@
+
+It can easily combine: TODO:untested
+
+- 'getDocType' and 'getDocType'
+- 'getDocType' and 'deleteDocType'
+
+But it can also combine all other API calls with a proper
+transformation @f@ and the use of 'mapM' for wrapping B.
+
+To use it as infix operator, you need to apply the transformation
+function @f@ to 'andThenWith' and bind that to a name like
+@andThenWithCustomerField@.
+
+Examples: TODO:untested
+
+@
+  -- delete all Sales Orders of Customer
+  getDocType @Customer mgr cfg "Company A" `andThenWithTheirSalesOrders` mapM (deleteDocType @SalesOrder mgr cfg)
+
+  -- update all Customer matching query
+  getDocTypeList @Customer mgr cfg query `andThenWithCustomerName` mapM_ (\(name, updatedDoc) -> putDocType @Customer mgr cfg name updatedDoc)
+@
+
+-}
+andThenWith
+  :: (a -> c)
+  -> IO (ApiResponse a)
+  -> (c -> IO (ApiResponse b))
+  -> IO (ApiResponse a, Maybe (ApiResponse b))
+andThenWith f io1 io2 = do
+  res1 <- io1
+  case res1 of
+    (Err _ _) -> return (res1, Nothing)
+    (Ok _ _ x) -> do
+      res <- io2 (f x)
+      return (res1, Just res)
