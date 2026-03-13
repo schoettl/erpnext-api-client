@@ -43,7 +43,10 @@ import ERPNext.Client.Helper (urlEncode)
 -- Each DocType has a unique name but there can still be multiple
 -- „views“ (i.e. records types) for one DocType.
 class IsDocType a where
+  -- | The DocType name, e.g. „Sales Order“.
   docTypeName :: Text
+  -- | The document identifier - called @name@ in ERPNext.
+  docName :: a -> Text
 
 {-|
   Get a list of all documents of a given DocType.
