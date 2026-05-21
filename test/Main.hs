@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import ERPNext.Client
 import ERPNext.Client.Helper
 import ERPNext.Client.QueryStringParams
 import Test.DocTest
@@ -16,6 +17,14 @@ main :: IO ()
 main = do
   doctest ["src/"]
   hspec $ do
+   describe "ERPNext.Client" $ do
+    describe "Functor of ApiResponse" $ do
+      it "does not change Err" $ hedgehog $ do
+        t <- forAll $ Gen.text (Range.linear 0 100) Gen.unicode
+        let x = Err undefined Nothing
+        let f y = y <> "_changed"
+        fmap f x === x
+
    describe "ERPNext.Client.QueryStringParams" $ do
     describe "renderQueryStringParams" $ do
       it "escapes quote and comma" $ do
