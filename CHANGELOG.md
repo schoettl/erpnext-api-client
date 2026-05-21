@@ -9,6 +9,7 @@ and this project adheres to the
 ### Added
 
 - Added `docName` method to `IsDocType` class to get the document ID.
+- Add doc for `getDocTypeList` about default number of rows.
 
 ## [0.2.0.0] - 2025-04-12
 

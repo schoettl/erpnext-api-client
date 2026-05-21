@@ -52,6 +52,10 @@ class IsDocType a where
   Get a list of all documents of a given DocType.
   The 'QueryStringParam's can select fields, filter, order, enable
   paging, and more.
+
+  Warning: The resulting list is limited to 20 items by default
+  (@limit_page_length=20@, see API documentation <https://docs.frappe.io/framework/user/en/api/rest#listing-documents>).
+  Use 'ERPNext.Client.QueryStringParams.LimitPageLength' to set a different limit.
 -}
 getDocTypeList :: forall a. (IsDocType a, FromJSON a)
                => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
