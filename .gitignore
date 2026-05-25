@@ -1,3 +1,5 @@
 README.md
 dist-newstyle/
 .stack-work/
+.aider*
+.env
