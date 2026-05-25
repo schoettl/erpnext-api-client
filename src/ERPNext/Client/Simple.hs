@@ -14,13 +14,99 @@ module ERPNext.Client.Simple
   , postDoc
   , putDoc
   , deleteDoc
+  , ApiResponse (..)
+  , Config (..)
+  , Secret (..)
   ) where
 
-import Network.HTTP.Client (Manager, httpLbs)
-import Data.Text
-import Data.Aeson (Value)
-import ERPNext.Client (Config, ApiResponse, createRequest, createRequestWithBody, parseGetResponse, parseDeleteResponse)
+import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..))
+import Network.HTTP.Types (hAuthorization, hContentType, Header)
+import Data.Text hiding (unpack)
+import Data.Text qualified as T
+import Data.Text.Encoding (encodeUtf8)
+import Data.Aeson (Value, FromJSON (..), Result (..), fromJSON, decode, encode, ToJSON, withObject, (.:))
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as LBS
 import ERPNext.Client.Helper (urlEncode)
+
+-- | API client configuration.
+data Config = Config
+  { baseUrl :: Text
+  , apiKey :: Text
+  , apiSecret :: Secret
+  }
+
+-- | Opaque type to store the API secret.
+data Secret = Secret
+  { getSecret :: Text
+  }
+
+-- | Data wrapper type just to parse the JSON returned by ERPNext.
+data DataWrapper a = DataWrapper { getData :: a }
+  deriving Show
+
+instance FromJSON a => FromJSON (DataWrapper a) where
+  parseJSON = withObject "DataWrapper" $ \obj -> do
+    dataValue <- obj .: "data"
+    return (DataWrapper dataValue)
+
+-- | The API response.
+data ApiResponse a
+  = Ok -- ^ The OK response.
+      (Response LBS.ByteString) -- ^ The server's full response including header information.
+      Value -- ^ The returned JSON.
+      a -- ^ The result parsed from the returned JSON.
+  | Err -- ^ The error response.
+      (Response LBS.ByteString) -- ^ The server's full response including header information.
+      (Maybe (Value, Text)) -- ^ If the response is valid JSON, 'Just' the returned JSON and
+                            -- the parse error message telling why 'Value' couldn't be parsed
+                            -- into @a@.
+  deriving Show
+
+instance Functor ApiResponse where
+  fmap f (Ok response val x) = Ok response val (f x)
+  fmap _ (Err response err)  = Err response err
+
+-- | Create the API 'Request'.
+createRequest :: Config -> Text -> BS.ByteString -> IO Request
+createRequest config path method = do
+  request <- parseRequest $ T.unpack (baseUrl config <> path)
+  return request
+    { method = method
+    , requestHeaders = [mkAuthHeader config]
+    }
+
+-- | Create the API 'Request' with a JSON body.
+createRequestWithBody :: ToJSON a => Config -> Text -> BS.ByteString -> a -> IO Request
+createRequestWithBody config path method doc = do
+  request <- parseRequest $ T.unpack (baseUrl config <> path)
+  return request
+    { method = method
+    , requestHeaders = mkAuthHeader config : [(hContentType, encodeUtf8 "application/json")]
+    , requestBody = RequestBodyLBS (encode doc)
+    }
+
+mkAuthHeader :: Config -> Header
+mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
+                          in (hAuthorization, encodeUtf8 $ "token " <> authToken)
+
+parseGetResponse :: forall a. FromJSON a => Response LBS.ByteString -> ApiResponse a
+parseGetResponse response =
+  case decode @Value (responseBody response) of
+    Just value -> case fromJSON value :: Result (DataWrapper a) of
+      Success result -> Ok response value (getData result)
+      Error err -> Err response (Just (value, pack err))
+    Nothing -> Err response Nothing
+
+parseDeleteResponse :: Response LBS.ByteString -> ApiResponse ()
+parseDeleteResponse response =
+  case decode @Value (responseBody response) of
+    Just value -> case fromJSON value :: Result (DataWrapper Text) of
+      Success (DataWrapper message)
+        | message == "ok" -> Ok response value ()
+        | otherwise -> Err response (Just (value, message))
+      Error err -> Err response (Just (value, pack err))
+    Nothing -> Err response Nothing
 
 -- | Get a list of documents for a given DocType name.
 -- The filter parameter can contain raw query string parameters.

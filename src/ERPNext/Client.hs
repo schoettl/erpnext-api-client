@@ -24,30 +24,22 @@ module ERPNext.Client
   , mkSecret
   , mkConfig
   , IsDocType (..)
-  , Config ()
-  , Secret ()
+  , Config (..)
+  , Secret (..)
   , QueryStringParam (..)
   , ApiResponse (..)
   , getResponse
   , andThenWith
-  -- Exported helper functions for Simple module
-  , createRequest
-  , createRequestWithBody
-  , parseGetResponse
-  , parseDeleteResponse
-  , mkAuthHeader
-  , baseUrl
   ) where
 
-import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest, RequestBody (..))
-import Network.HTTP.Types (hAuthorization, hContentType, Header)
-import Data.Text hiding (map, filter)
-import Data.Text.Encoding (encodeUtf8)
+import Network.HTTP.Client (Response (..), Manager)
+import Data.Text hiding (map, filter, null)
 import Data.Aeson
-import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
+import Data.Maybe (mapMaybe)
 import ERPNext.Client.QueryStringParams
-import ERPNext.Client.Helper (urlEncode)
+import ERPNext.Client.Simple qualified as Simple
+import ERPNext.Client.Simple (ApiResponse (..), Config (..), Secret (..))
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name but there can still be multiple
@@ -70,10 +62,13 @@ class IsDocType a where
 getDocTypeList :: forall a. (IsDocType a, FromJSON a)
                => Manager -> Config -> [QueryStringParam] -> IO (ApiResponse [a])
 getDocTypeList manager config qsParams = do
-  let path = getResourcePath @a <> "?" <> renderQueryStringParams qsParams
-  request <- createRequest config path "GET"
-  response <- httpLbs request manager
-  return $ parseGetResponse response
+  let queryString = if null qsParams then Nothing else Just (renderQueryStringParams qsParams)
+  response <- Simple.getDocList manager config (docTypeName @a) queryString
+  return $ fmap (mapMaybe parseValue) response
+  where
+    parseValue v = case fromJSON v of
+      Success a -> Just a
+      Error _ -> Nothing
 
 {-|
   Get a list of all documents of a given DocType including all fields.
@@ -98,10 +93,8 @@ getDocTypeListAllFields manager config qsParams = do
 getDocType :: forall a. (IsDocType a, FromJSON a)
            => Manager -> Config -> Text -> IO (ApiResponse a)
 getDocType manager config name = do
-  let path = getResourcePath @a <> "/" <> name
-  request <- createRequest config path "GET"
-  response <- httpLbs request manager
-  return $ parseGetResponse response
+  response <- Simple.getDoc manager config (docTypeName @a) name
+  return $ parseTypedResponse response
 
 {- | Delete a single document of a given DocType by name.
 
@@ -114,29 +107,22 @@ res \<- deleteDocType @Customer manager config "customer name"
 -}
 deleteDocType :: forall a. (IsDocType a)
               => Manager -> Config -> Text -> IO (ApiResponse ())
-deleteDocType manager config name = do
-  let path = getResourcePath @a <> "/" <> name
-  request <- createRequest config path "DELETE"
-  response <- httpLbs request manager
-  return $ parseDeleteResponse response
+deleteDocType manager config name =
+  Simple.deleteDoc manager config (docTypeName @a) name
 
 -- | Create a new document of a given DocType.
 postDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
             => Manager -> Config -> a -> IO (ApiResponse a)
 postDocType manager config doc = do
-  let path = getResourcePath @a
-  request <- createRequestWithBody config path "POST" doc
-  response <- httpLbs request manager
-  return $ parseGetResponse response
+  response <- Simple.postDoc manager config (docTypeName @a) (toJSON doc)
+  return $ parseTypedResponse response
 
 -- | Update a document of a given DocType by name.
 putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
            => Manager -> Config -> Text -> a -> IO (ApiResponse a)
 putDocType manager config name doc = do
-  let path = getResourcePath @a <> "/" <> name
-  request <- createRequestWithBody config path "PUT" doc
-  response <- httpLbs request manager
-  return $ parseGetResponse response
+  response <- Simple.putDoc manager config (docTypeName @a) name (toJSON doc)
+  return $ parseTypedResponse response
 
 -- | Create an API client configuration.
 mkConfig
@@ -155,93 +141,18 @@ mkSecret :: Text -> Secret
 mkSecret = Secret
 
 
--- | Create the API 'Request'.
-createRequest :: Config -> Text -> BS.ByteString -> IO Request
-createRequest config path method = do
-  request <- parseRequest $ unpack (baseUrl config <> path)
-  return request
-    { method = method
-    , requestHeaders = [mkAuthHeader config]
-    }
-
--- | Create the API 'Request' with a JSON body.
-createRequestWithBody :: ToJSON a => Config -> Text -> BS.ByteString -> a -> IO Request
-createRequestWithBody config path method doc = do
-  request <- parseRequest $ unpack (baseUrl config <> path)
-  return request
-    { method = method
-    , requestHeaders = mkAuthHeader config : [(hContentType, encodeUtf8 "application/json")]
-    , requestBody = RequestBodyLBS (encode doc)
-    }
-
--- | API client configuration.
-data Config = Config
-  { baseUrl :: Text
-  , apiKey :: Text
-  , apiSecret :: Secret
-  }
-
--- | Opaque type to store the API secret.
-data Secret = Secret
-  { getSecret :: Text
-  }
-
--- | Data wrapper type just to parse the JSON returned by ERPNext.
-data DataWrapper a = DataWrapper { getData :: a }
-  deriving Show
-
-instance FromJSON a => FromJSON (DataWrapper a) where
-  parseJSON = withObject "DataWrapper" $ \obj -> do
-    dataValue <- obj .: "data"
-    return (DataWrapper dataValue)
-
--- | The API response.
-data ApiResponse a
-  = Ok -- ^ The OK response.
-      (Response LBS.ByteString) -- ^ The server's full response including header information.
-      Value -- ^ The returned JSON.
-      a -- ^ The result parsed from the returned JSON.
-  | Err -- ^ The error response.
-      (Response LBS.ByteString) -- ^ The server's full response including header information.
-      (Maybe (Value, Text)) -- ^ If the response is valid JSON, 'Just' the returned JSON and
-                            -- the parse error message telling why 'Value' couldn't be parsed
-                            -- into @a@.
-  deriving Show
-
-instance Functor ApiResponse where
-  fmap f (Ok response val x) = Ok response val (f x)
-  fmap _ (Err response err)  = Err response err
-
-
 -- | Get the full response from the API response.
 getResponse :: ApiResponse a -> Response LBS.ByteString
 getResponse (Ok r _ _) = r
 getResponse (Err r _) = r
 
-mkAuthHeader :: Config -> Header
-mkAuthHeader config = let authToken = apiKey config <> ":" <> getSecret (apiSecret config)
-                          in (hAuthorization, encodeUtf8 $ "token " <> authToken)
-
-parseGetResponse :: forall a. FromJSON a => Response LBS.ByteString -> ApiResponse a
-parseGetResponse response =
-  case decode @Value (responseBody response) of
-    Just value -> case fromJSON value :: Result (DataWrapper a) of
-      Success result -> Ok response value (getData result)
-      Error err -> Err response (Just (value, pack err))
-    Nothing -> Err response Nothing
-
-parseDeleteResponse :: Response LBS.ByteString -> ApiResponse ()
-parseDeleteResponse response =
-  case decode @Value (responseBody response) of
-    Just value -> case fromJSON value :: Result (DataWrapper Text) of
-      Success (DataWrapper message)
-        | message == "ok" -> Ok response value ()
-        | otherwise -> Err response (Just (value, message))
-      Error err -> Err response (Just (value, pack err))
-    Nothing -> Err response Nothing
-
-getResourcePath :: forall a. IsDocType a => Text
-getResourcePath = "/resource/" <> urlEncode (docTypeName @a)
+-- Helper function to convert ApiResponse Value to ApiResponse a
+parseTypedResponse :: FromJSON a => ApiResponse Value -> ApiResponse a
+parseTypedResponse (Ok response val jsonVal) =
+  case fromJSON jsonVal of
+    Success a -> Ok response val a
+    Error err -> Err response (Just (val, pack err))
+parseTypedResponse (Err response err) = Err response err
 
 {-|
 This function helps to sequentially execute two API calls A and B by
