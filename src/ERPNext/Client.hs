@@ -14,13 +14,13 @@ https://docs.frappe.io/framework/user/en/api/rest
 -}
 
 module ERPNext.Client
-  ( getDocTypeList
-  , getDocTypeListAllFields
+  ( getDocList
+  , getDocListAllFields
   , DocType (..)
-  , getDocType
-  , postDocType
-  , putDocType
-  , deleteDocType
+  , getDoc
+  , postDoc
+  , putDoc
+  , deleteDoc
   , mkSecret
   , mkConfig
   , IsDocType (..)
@@ -59,9 +59,9 @@ class IsDocType a where
   (@limit_page_length=20@, see API documentation <https://docs.frappe.io/framework/user/en/api/rest#listing-documents>).
   Use 'ERPNext.Client.QueryStringParams.LimitPageLength' to set a different limit.
 -}
-getDocTypeList :: forall a. (IsDocType a, FromJSON a)
+getDocList :: forall a. (IsDocType a, FromJSON a)
                => Manager -> Config -> [QueryStringParam] -> IO (ApiResponse [a])
-getDocTypeList manager config qsParams = do
+getDocList manager config qsParams = do
   let queryString = if null qsParams then Nothing else Just (renderQueryStringParams qsParams)
   response <- Simple.getDocList manager config (docTypeName @a) queryString
   return $ fmap (mapMaybe parseValue) response
@@ -73,26 +73,26 @@ getDocTypeList manager config qsParams = do
 {-|
   Get a list of all documents of a given DocType including all fields.
 
-  By default, only the @name@ field is fetched. See 'getDocTypeList' for more details.
+  By default, only the @name@ field is fetched. See 'getDocList' for more details.
 -}
-getDocTypeListAllFields :: forall a. (IsDocType a, FromJSON a)
+getDocListAllFields :: forall a. (IsDocType a, FromJSON a)
                => Manager
                -> Config
                -> [QueryStringParam]
                -> IO (ApiResponse DocType, Maybe (ApiResponse [a]))
-getDocTypeListAllFields manager config qsParams = do
-  getDocType @DocType manager config (docTypeName @DocType)
+getDocListAllFields manager config qsParams = do
+  getDoc @DocType manager config (docTypeName @DocType)
     `andThenWithFields`
-    (\fieldNames -> getDocTypeList manager config $ Fields fieldNames : filter noFields qsParams)
+    (\fieldNames -> getDocList manager config $ Fields fieldNames : filter noFields qsParams)
   where
     andThenWithFields = andThenWith dtFieldNames
     noFields (Fields _) = False
     noFields _ = True
 
 -- | Get a single document of a given DocType by name.
-getDocType :: forall a. (IsDocType a, FromJSON a)
+getDoc :: forall a. (IsDocType a, FromJSON a)
            => Manager -> Config -> Text -> IO (ApiResponse a)
-getDocType manager config name = do
+getDoc manager config name = do
   response <- Simple.getDoc manager config (docTypeName @a) name
   return $ parseTypedResponse response
 
@@ -102,25 +102,25 @@ The phantom type parameter @a@ is used to figure out the DocType.
 A customer can be deleted like this:
 
 @
-res \<- deleteDocType @Customer manager config "customer name"
+res \<- deleteDoc @Customer manager config "customer name"
 @
 -}
-deleteDocType :: forall a. (IsDocType a)
+deleteDoc :: forall a. (IsDocType a)
               => Manager -> Config -> Text -> IO (ApiResponse ())
-deleteDocType manager config name =
+deleteDoc manager config name =
   Simple.deleteDoc manager config (docTypeName @a) name
 
 -- | Create a new document of a given DocType.
-postDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
+postDoc :: forall a. (IsDocType a, FromJSON a, ToJSON a)
             => Manager -> Config -> a -> IO (ApiResponse a)
-postDocType manager config doc = do
+postDoc manager config doc = do
   response <- Simple.postDoc manager config (docTypeName @a) (toJSON doc)
   return $ parseTypedResponse response
 
 -- | Update a document of a given DocType by name.
-putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
+putDoc :: forall a. (IsDocType a, FromJSON a, ToJSON a)
            => Manager -> Config -> Text -> a -> IO (ApiResponse a)
-putDocType manager config name doc = do
+putDoc manager config name doc = do
   response <- Simple.putDoc manager config (docTypeName @a) name (toJSON doc)
   return $ parseTypedResponse response
 
@@ -145,14 +145,14 @@ expressions to one.
 @
   TODO:untested
   let andThen = andThenWith customer
-  (salesOrder', mCustomer') <- getDocType @SalesOrder mgr cfg "SAL-ORD-2025-00031"
-                                `andThen` getDocType @Customer mgr cfg
+  (salesOrder', mCustomer') <- getDoc @SalesOrder mgr cfg "SAL-ORD-2025-00031"
+                                `andThen` getDoc @Customer mgr cfg
 @
 
 It can easily combine: TODO:untested
 
-- 'getDocType' and 'getDocType'
-- 'getDocType' and 'deleteDocType'
+- 'getDoc' and 'getDoc'
+- 'getDoc' and 'deleteDoc'
 
 But it can also combine all other API calls with a proper
 transformation @f@ and the use of 'mapM' for wrapping B.
@@ -165,10 +165,10 @@ Examples: TODO:untested
 
 @
   -- delete all Sales Orders of Customer
-  getDocType @Customer mgr cfg "Company A" `andThenWithTheirSalesOrders` mapM (deleteDocType @SalesOrder mgr cfg)
+  getDoc @Customer mgr cfg "Company A" `andThenWithTheirSalesOrders` mapM (deleteDoc @SalesOrder mgr cfg)
 
   -- update all Customer matching query
-  getDocTypeList @Customer mgr cfg query `andThenWithCustomerName` mapM_ (\(name, updatedDoc) -> putDocType @Customer mgr cfg name updatedDoc)
+  getDocList @Customer mgr cfg query `andThenWithCustomerName` mapM_ (\(name, updatedDoc) -> putDoc @Customer mgr cfg name updatedDoc)
 @
 
 -}

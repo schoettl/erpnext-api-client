@@ -19,11 +19,11 @@ remote method calls, and file uploads.
 
 CRUD operations on a given DocType are:
 
-- =GET= list of all documents of a DocType (=getDocTypeList=)
-- =POST= to create a new document (=postDocType=)
-- =GET= a document by name (=getDocType=)
-- =PUT= to update a document by name (=putDocType=)
-- =DELETE= a document by name (=deleteDocType=)
+- =GET= list of all documents of a DocType (=getDocList=)
+- =POST= to create a new document (=postDoc=)
+- =GET= a document by name (=getDoc=)
+- =PUT= to update a document by name (=putDoc=)
+- =DELETE= a document by name (=deleteDoc=)
 
 Note: Remote method calls and file uploads are not yet supported.
 
@@ -63,7 +63,7 @@ given DocType.
   main = do
     let config = mkConfig "https://my-erpnext.frappe.cloud/api" "api-key" (mkSecret "api-secret")
     manager <- newTlsManager
-    response <- getDocType manager config "Company A" :: IO (ApiResponse Customer)
+    response <- getDoc manager config "Company A" :: IO (ApiResponse Customer)
     case response of
       Ok _ _ c -> putStrLn $ name c
       Err r _  -> putStrLn $ show r
@@ -102,7 +102,7 @@ First, define these variables in a =.env= file:
   let config = mkConfig url apiKey apiSecret
   manager <- newTlsManager
 
-  res <- getDocType @DocType manager config "Task"
+  res <- getDoc @DocType manager config "Task"
 #+end_src
 
 
