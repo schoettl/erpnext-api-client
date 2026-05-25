@@ -14,9 +14,11 @@ module ERPNext.Client.Simple
   , postDoc
   , putDoc
   , deleteDoc
+  , mkSecret
+  , mkConfig
   , ApiResponse (..)
-  , Config (..)
-  , Secret (..)
+  , Config
+  , Secret
   ) where
 
 import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..))
@@ -40,6 +42,22 @@ data Config = Config
 data Secret = Secret
   { getSecret :: Text
   }
+
+-- | Create an API client configuration.
+mkConfig
+  :: Text -- ^ The API base URL, e.g. @https://erpnext.example.com/api"@.
+  -> Text -- ^ The API key.
+  -> Secret -- ^ The API secret.
+  -> Config
+mkConfig baseUrl apiKey apiSecret = Config
+  { baseUrl = baseUrl
+  , apiKey = apiKey
+  , apiSecret = apiSecret
+  }
+
+-- | Create the API secret used together with the API key for authorization.
+mkSecret :: Text -> Secret
+mkSecret = Secret
 
 -- | Data wrapper type just to parse the JSON returned by ERPNext.
 data DataWrapper a = DataWrapper { getData :: a }

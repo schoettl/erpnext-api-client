@@ -24,8 +24,8 @@ module ERPNext.Client
   , mkSecret
   , mkConfig
   , IsDocType (..)
-  , Config (..)
-  , Secret (..)
+  , Config
+  , Secret
   , QueryStringParam (..)
   , ApiResponse (..)
   , getResponse
@@ -39,7 +39,7 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.Maybe (mapMaybe)
 import ERPNext.Client.QueryStringParams
 import ERPNext.Client.Simple qualified as Simple
-import ERPNext.Client.Simple (ApiResponse (..), Config (..), Secret (..))
+import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig)
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name but there can still be multiple
@@ -123,23 +123,6 @@ putDocType :: forall a. (IsDocType a, FromJSON a, ToJSON a)
 putDocType manager config name doc = do
   response <- Simple.putDoc manager config (docTypeName @a) name (toJSON doc)
   return $ parseTypedResponse response
-
--- | Create an API client configuration.
-mkConfig
-  :: Text -- ^ The API base URL, e.g. @https://erpnext.example.com/api"@.
-  -> Text -- ^ The API key.
-  -> Secret -- ^ The API secret.
-  -> Config
-mkConfig baseUrl apiKey apiSecret = Config
-  { baseUrl = baseUrl
-  , apiKey = apiKey
-  , apiSecret = apiSecret
-  }
-
--- | Create the API secret used together with the API key for authorization.
-mkSecret :: Text -> Secret
-mkSecret = Secret
-
 
 -- | Get the full response from the API response.
 getResponse :: ApiResponse a -> Response LBS.ByteString
