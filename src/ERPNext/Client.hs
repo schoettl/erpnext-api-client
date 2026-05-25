@@ -15,6 +15,8 @@ https://docs.frappe.io/framework/user/en/api/rest
 
 module ERPNext.Client
   ( getDocTypeList
+  , getDocTypeListAllFields
+  , DocType (..)
   , getDocType
   , postDocType
   , putDocType
@@ -28,11 +30,18 @@ module ERPNext.Client
   , ApiResponse (..)
   , getResponse
   , andThenWith
+  -- Exported helper functions for Simple module
+  , createRequest
+  , createRequestWithBody
+  , parseGetResponse
+  , parseDeleteResponse
+  , mkAuthHeader
+  , baseUrl
   ) where
 
 import Network.HTTP.Client (Response (..), Request (..), Manager, httpLbs, parseRequest, RequestBody (..))
 import Network.HTTP.Types (hAuthorization, hContentType, Header)
-import Data.Text hiding (map)
+import Data.Text hiding (map, filter)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson
 import Data.ByteString qualified as BS
@@ -59,12 +68,31 @@ class IsDocType a where
   Use 'ERPNext.Client.QueryStringParams.LimitPageLength' to set a different limit.
 -}
 getDocTypeList :: forall a. (IsDocType a, FromJSON a)
-               => Manager -> Config  -> [QueryStringParam]-> IO (ApiResponse [a])
+               => Manager -> Config -> [QueryStringParam] -> IO (ApiResponse [a])
 getDocTypeList manager config qsParams = do
   let path = getResourcePath @a <> "?" <> renderQueryStringParams qsParams
   request <- createRequest config path "GET"
   response <- httpLbs request manager
   return $ parseGetResponse response
+
+{-|
+  Get a list of all documents of a given DocType including all fields.
+
+  By default, only the @name@ field is fetched. See 'getDocTypeList' for more details.
+-}
+getDocTypeListAllFields :: forall a. (IsDocType a, FromJSON a)
+               => Manager
+               -> Config
+               -> [QueryStringParam]
+               -> IO (ApiResponse DocType, Maybe (ApiResponse [a]))
+getDocTypeListAllFields manager config qsParams = do
+  getDocType @DocType manager config (docTypeName @DocType)
+    `andThenWithFields`
+    (\fieldNames -> getDocTypeList manager config $ Fields fieldNames : filter noFields qsParams)
+  where
+    andThenWithFields = andThenWith dtFieldNames
+    noFields (Fields _) = False
+    noFields _ = True
 
 -- | Get a single document of a given DocType by name.
 getDocType :: forall a. (IsDocType a, FromJSON a)
@@ -262,3 +290,23 @@ andThenWith f io1 io2 = do
     (Ok _ _ x) -> do
       res <- io2 (f x)
       return (res1, Just res)
+
+data DocType = DocType
+  { dtName :: Text
+  , dtFieldNames :: [Text]
+  }
+  deriving (Show)
+
+instance FromJSON DocType where
+  parseJSON = withObject "DocType" $ \obj -> do
+    name <- obj .: "name"
+    fieldsArray <- obj .: "fields"
+    fieldNames <- mapM extractFieldName fieldsArray
+    return $ DocType name fieldNames
+    where
+      extractFieldName = withObject "Field" $ \fieldObj ->
+        fieldObj .: "fieldname"
+
+instance IsDocType DocType where
+  docTypeName = "DocType"
+  docName = dtName
