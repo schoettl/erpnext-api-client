@@ -72,10 +72,39 @@ given DocType.
 Inside this repository directory you can run:
 
 #+begin_src sh
-  stack runhaskell example1.hs
+  stack runhaskell --package http-client-tls example1.hs
 #+end_src
 
 #+RESULTS:
+
+** Interactive testing
+
+First, define these variables in a =.env= file:
+
+#+begin_src bash
+  export ERPNEXT_BASE_URL=https://my-test.frappe.cloud/api
+  export ERPNEXT_API_KEY=xxxxxx
+  export ERPNEXT_API_SECRET=yyyyyy
+#+end_src
+
+: . .env
+: stack ghci --package http-client-tls
+
+#+begin_src haskell
+  {-# LANGUAGE OverloadedStrings #-}
+  import System.Environment
+  import Network.HTTP.Client.TLS
+
+  url <- pack <$> getEnv "ERPNEXT_BASE_URL"
+  apiKey <- pack <$> getEnv "ERPNEXT_API_KEY"
+  apiSecret <- mkSecret . pack <$> getEnv "ERPNEXT_API_SECRET"
+
+  let config = mkConfig url apiKey apiSecret
+  manager <- newTlsManager
+
+  res <- getDocType @DocType manager config "Task"
+#+end_src
+
 
 ** Scope and Limits
 
