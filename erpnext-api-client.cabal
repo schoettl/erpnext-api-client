@@ -18,6 +18,7 @@ extra-source-files:  README.md
 library
   hs-source-dirs:      src
   exposed-modules:     ERPNext.Client
+                     , ERPNext.Client.Simple
                      , ERPNext.Client.Helper
                      , ERPNext.Client.Filters
                      , ERPNext.Client.QueryStringParams
