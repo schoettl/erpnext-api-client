@@ -4,3 +4,10 @@ resolver: lts-24.11
 nix:
   enable: true
   packages: [zlib]
+  nix-shell-options:
+    - --keep
+    - ERPNEXT_BASE_URL
+    - --keep
+    - ERPNEXT_API_KEY
+    - --keep
+    - ERPNEXT_API_SECRET
