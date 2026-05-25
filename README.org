@@ -37,6 +37,14 @@ for DocTypes from a simple DSL (see section below).
 
 ** Usage
 
+For running the example, define these variables in a =.env= file:
+
+#+begin_src bash
+  export ERPNEXT_BASE_URL=https://my-test.frappe.cloud/api
+  export ERPNEXT_API_KEY=xxxxxx
+  export ERPNEXT_API_SECRET=yyyyyy
+#+end_src
+
 This sample code makes a GET request for a named document of the
 given DocType.
 
@@ -46,6 +54,8 @@ given DocType.
   {-# LANGUAGE OverloadedStrings #-}
 
   import ERPNext.Client
+  import System.Environment
+  import Data.Text (pack)
   import Network.HTTP.Client.TLS
   import Data.Aeson
   import GHC.Generics
@@ -61,9 +71,13 @@ given DocType.
 
   main :: IO ()
   main = do
-    let config = mkConfig "https://my-erpnext.frappe.cloud/api" "api-key" (mkSecret "api-secret")
+    url <- pack <$> getEnv "ERPNEXT_BASE_URL" -- e.g. "https://my-erpnext.frappe.cloud/api"
+    apiKey <- pack <$> getEnv "ERPNEXT_API_KEY"
+    apiSecret <- mkSecret . pack <$> getEnv "ERPNEXT_API_SECRET"
+
+    let config = mkConfig url apiKey apiSecret
     manager <- newTlsManager
-    response <- getDoc manager config "Company A" :: IO (ApiResponse Customer)
+    response <- ERPNext.Client.getDoc manager config "Company A" :: IO (ApiResponse Customer)
     case response of
       Ok _ _ c -> putStrLn $ name c
       Err r _  -> putStrLn $ show r
@@ -72,6 +86,7 @@ given DocType.
 Inside this repository directory you can run:
 
 #+begin_src sh
+  . .env
   stack runhaskell --package http-client-tls example1.hs
 #+end_src
 
@@ -79,19 +94,13 @@ Inside this repository directory you can run:
 
 ** Interactive testing
 
-First, define these variables in a =.env= file:
-
-#+begin_src bash
-  export ERPNEXT_BASE_URL=https://my-test.frappe.cloud/api
-  export ERPNEXT_API_KEY=xxxxxx
-  export ERPNEXT_API_SECRET=yyyyyy
-#+end_src
-
 : . .env
 : stack ghci --package http-client-tls
 
 #+begin_src haskell
   {-# LANGUAGE OverloadedStrings #-}
+  import ERPNext.Client
+  import ERPNext.Client.Simple
   import System.Environment
   import Network.HTTP.Client.TLS
 
@@ -102,7 +111,11 @@ First, define these variables in a =.env= file:
   let config = mkConfig url apiKey apiSecret
   manager <- newTlsManager
 
-  res <- getDoc @DocType manager config "Task"
+  -- Infer doctype via type system:
+  Ok _ jsonResponse parsedResponse <- ERPNext.Client.getDoc @DocType manager config "Task"
+
+  -- Explicitly name the doctype to fetch:
+  Ok _ jsonResponse2 _ <- ERPNext.Client.Simple.getDoc manager config "DocType" "Task"
 #+end_src
 
 

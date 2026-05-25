@@ -15,8 +15,6 @@ https://docs.frappe.io/framework/user/en/api/rest
 
 module ERPNext.Client
   ( getDocList
-  , getDocListAllFields
-  , DocType (..)
   , getDoc
   , postDoc
   , putDoc
@@ -28,8 +26,10 @@ module ERPNext.Client
   , Secret
   , QueryStringParam (..)
   , ApiResponse (..)
+  , DocType (..)
   , getResponse
   , andThenWith
+  , getDocListAllFields
   ) where
 
 import Network.HTTP.Client (Response (..), Manager)
