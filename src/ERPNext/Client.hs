@@ -81,7 +81,7 @@ getDocListAllFields :: forall a. (IsDocType a, FromJSON a)
                -> [QueryStringParam]
                -> IO (ApiResponse DocType, Maybe (ApiResponse [a]))
 getDocListAllFields manager config qsParams = do
-  getDoc @DocType manager config (docTypeName @DocType)
+  getDoc @DocType manager config (docTypeName @a)
     `andThenWithFields`
     (\fieldNames -> getDocList manager config $ Fields fieldNames : filter noFields qsParams)
   where
