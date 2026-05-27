@@ -37,14 +37,6 @@ for DocTypes from a simple DSL (see section below).
 
 ** Usage
 
-For running the example, define these variables in a =.env= file:
-
-#+begin_src bash
-  export ERPNEXT_BASE_URL=https://my-test.frappe.cloud/api
-  export ERPNEXT_API_KEY=xxxxxx
-  export ERPNEXT_API_SECRET=yyyyyy
-#+end_src
-
 This sample code makes a GET request for a named document of the
 given DocType.
 
@@ -83,7 +75,15 @@ given DocType.
       Err r _  -> putStrLn $ show r
 #+end_src
 
-Inside this repository directory you can run:
+For running the example, define these variables in a =.env= file:
+
+#+begin_src sh
+  export ERPNEXT_BASE_URL=https://my-test.frappe.cloud/api
+  export ERPNEXT_API_KEY=xxxxxx
+  export ERPNEXT_API_SECRET=yyyyyy
+#+end_src
+
+Then, inside this repository directory you can run:
 
 #+begin_src sh
   . .env
@@ -92,7 +92,7 @@ Inside this repository directory you can run:
 
 #+RESULTS:
 
-** Interactive testing
+** Interactive testing in GHCi
 
 : . .env
 : stack ghci --package http-client-tls
@@ -113,13 +113,12 @@ Inside this repository directory you can run:
 
   -- Infer requested doctype via type system, @DocType in this example:
   Ok _ jsonResponse parsedResponse <- Client.getDoc @DocType manager config "Task"
-  putStrLn $ showJsonPretty parsedResponse
+  print parsedResponse
 
   -- Explicitly name the doctype to fetch, "DocType" in this example:
   Ok _ jsonResponse2 _ <- Simple.getDoc manager config "DocType" "Task"
   putStrLn $ showJsonPretty jsonResponse2
 #+end_src
-
 
 ** Scope and Limits
 
