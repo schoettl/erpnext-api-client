@@ -33,7 +33,7 @@ import Data.Aeson (Value, FromJSON (..), Result (..), fromJSON, decode, encode, 
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
-import ERPNext.Client.Helper (urlEncode, encodeToText)
+import ERPNext.Client.Helper (urlEncode)
 
 -- | API client configuration.
 data Config = Config

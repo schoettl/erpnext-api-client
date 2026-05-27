@@ -3,7 +3,6 @@
 module ERPNext.Client.Helper
   ( urlEncode
   , urlDecode
-  , encodeToText
   , quote
   , tshow
   , Fieldname
@@ -11,15 +10,9 @@ module ERPNext.Client.Helper
 
 import Data.Text (Text, pack, unpack, replace)
 import Network.URI (escapeURIString, isUnreserved, unEscapeString)
-import Data.Aeson (encode, ToJSON)
-import Data.Text.Encoding (decodeUtf8)
-import Data.ByteString.Lazy (toStrict)
 
 -- | Type for field names of DocTypes.
 type Fieldname = Text
-
-encodeToText :: ToJSON a => a -> Text
-encodeToText = decodeUtf8 . toStrict . encode
 
 -- | Percent-encode string for use in a URL.
 --

@@ -57,6 +57,7 @@ test-suite tests
                      , http-types
                      , text
                      , aeson
+                     , aeson-pretty
                      , time
                      , network-uri
                      , bytestring
