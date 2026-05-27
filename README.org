@@ -101,8 +101,8 @@ Then, inside this repository directory you can run:
   {-# LANGUAGE OverloadedStrings #-}
   import ERPNext.Client qualified as Client
   import ERPNext.Client.Simple qualified as Simple
-  import System.Environment
   import Network.HTTP.Client.TLS
+  import System.Environment
 
   url <- pack <$> getEnv "ERPNEXT_BASE_URL"
   apiKey <- pack <$> getEnv "ERPNEXT_API_KEY"
