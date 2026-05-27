@@ -2,6 +2,7 @@
 
 module ERPNext.Client.Helper
   ( urlEncode
+  , urlEncodePieces
   , urlDecode
   , quote
   , tshow
@@ -14,12 +15,23 @@ import Network.URI (escapeURIString, isUnreserved, unEscapeString)
 -- | Type for field names of DocTypes.
 type Fieldname = Text
 
--- | Percent-encode string for use in a URL.
+-- | Percent-encode string for use in a URL including the characters "&=".
 --
--- >>> urlEncode $ pack "[ ]"
--- "%5B%20%5D"
+-- >>> urlEncode $ pack "[&]"
+-- "%5B%26%5D"
 urlEncode :: Text -> Text
 urlEncode = pack . escapeURIString isUnreserved . unpack
+
+-- | Percent-encode string for use in a URL but not the characters "&=".
+--
+-- This retains "&" to separate key-value pairs and "=" to separate keys from values.
+--
+-- >>> urlEncodePieces $ pack "fields=[\"project_name\"]&page_limit_length=10"
+-- "fields=%5B%22project_name%22%5D&page_limit_length=10"
+urlEncodePieces :: Text -> Text
+urlEncodePieces = pack . escapeURIString isUnresveredInPiece . unpack
+  where
+    isUnresveredInPiece c = isUnreserved c || c `elem` ("&=" :: String)
 
 -- | Opposite of 'urlEncode'.
 --

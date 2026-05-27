@@ -74,6 +74,9 @@ getDocList manager config qsParams = do
   Get a list of all documents of a given DocType including all fields.
 
   By default, only the @name@ field is fetched. See 'getDocList' for more details.
+
+  System fields like @_assign@ and @_user_tags@ are not
+  included, they are not part of the DocType definition.
 -}
 getDocListAllFields :: forall a. (IsDocType a, FromJSON a)
                => Manager

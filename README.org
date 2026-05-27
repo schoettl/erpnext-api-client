@@ -99,7 +99,7 @@ Inside this repository directory you can run:
 
 #+begin_src haskell
   {-# LANGUAGE OverloadedStrings #-}
-  import ERPNext.Client
+  import ERPNext.Client qualified as Client
   import ERPNext.Client.Simple qualified as Simple
   import System.Environment
   import Network.HTTP.Client.TLS
@@ -111,11 +111,13 @@ Inside this repository directory you can run:
   let config = mkConfig url apiKey apiSecret
   manager <- newTlsManager
 
-  -- Infer doctype via type system:
-  Ok _ jsonResponse parsedResponse <- getDoc @DocType manager config "Task"
+  -- Infer requested doctype via type system, @DocType in this example:
+  Ok _ jsonResponse parsedResponse <- Client.getDoc @DocType manager config "Task"
+  putStrLn $ showJsonPretty parsedResponse
 
-  -- Explicitly name the doctype to fetch:
+  -- Explicitly name the doctype to fetch, "DocType" in this example:
   Ok _ jsonResponse2 _ <- Simple.getDoc manager config "DocType" "Task"
+  putStrLn $ showJsonPretty jsonResponse2
 #+end_src
 
 

@@ -16,8 +16,9 @@ module ERPNext.Client.Simple
   , deleteDoc
   , mkSecret
   , mkConfig
-  , ApiResponse (..)
   , showJsonResponsePretty
+  , showJsonPretty
+  , ApiResponse (..)
   , Config
   , Secret
   ) where
@@ -90,11 +91,14 @@ instance Functor ApiResponse where
   fmap _ (Err response err)  = Err response err
 
 showJsonResponsePretty :: ApiResponse a -> String
-showJsonResponsePretty (Ok _ val _) = TL.unpack $ decodeUtf8 $ encodePretty val
-showJsonResponsePretty (Err _ (Just (val, _))) = TL.unpack $ decodeUtf8 $ encodePretty val
+showJsonResponsePretty (Ok _ val _) = showJsonPretty val
+showJsonResponsePretty (Err _ (Just (val, _))) = showJsonPretty val
 showJsonResponsePretty (Err response Nothing) = "Invalid JSON response. HTTP response: "
    ++ show (statusCode (responseStatus response)) ++ " "
    ++ BS8.unpack (statusMessage (responseStatus response))
+
+showJsonPretty :: ToJSON a => a -> String
+showJsonPretty = TL.unpack . decodeUtf8 . encodePretty
 
 -- | Create the API 'Request'.
 createRequest :: Config -> Text -> BS.ByteString -> IO Request
@@ -151,7 +155,7 @@ parseDeleteResponse response =
 getDocList :: Manager
            -> Config
            -> Text -- ^ DocType name
-           -> Maybe Text -- ^ Optional query string filter
+           -> Maybe Text -- ^ Optional query string filter (used in URL as is)
            -> IO (ApiResponse [Value])
 getDocList manager config docTypeName mFilter = do
   let path = "/resource/" <> urlEncode docTypeName <> maybe "" ("?" <>) mFilter
