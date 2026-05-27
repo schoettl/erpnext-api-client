@@ -100,7 +100,7 @@ Inside this repository directory you can run:
 #+begin_src haskell
   {-# LANGUAGE OverloadedStrings #-}
   import ERPNext.Client
-  import ERPNext.Client.Simple
+  import ERPNext.Client.Simple qualified as Simple
   import System.Environment
   import Network.HTTP.Client.TLS
 
@@ -112,10 +112,10 @@ Inside this repository directory you can run:
   manager <- newTlsManager
 
   -- Infer doctype via type system:
-  Ok _ jsonResponse parsedResponse <- ERPNext.Client.getDoc @DocType manager config "Task"
+  Ok _ jsonResponse parsedResponse <- getDoc @DocType manager config "Task"
 
   -- Explicitly name the doctype to fetch:
-  Ok _ jsonResponse2 _ <- ERPNext.Client.Simple.getDoc manager config "DocType" "Task"
+  Ok _ jsonResponse2 _ <- Simple.getDoc manager config "DocType" "Task"
 #+end_src
 
 

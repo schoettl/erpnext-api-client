@@ -17,19 +17,23 @@ module ERPNext.Client.Simple
   , mkSecret
   , mkConfig
   , ApiResponse (..)
+  , showJsonResponsePretty
   , Config
   , Secret
   ) where
 
 import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..))
-import Network.HTTP.Types (hAuthorization, hContentType, Header)
-import Data.Text hiding (unpack)
-import Data.Text qualified as T
+import Network.HTTP.Types (hAuthorization, hContentType, Header, statusCode, statusMessage)
+import Data.ByteString.Char8 qualified as BS8
+import Data.Text hiding (show)
+import Data.Text.Lazy qualified as TL
 import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Aeson (Value, FromJSON (..), Result (..), fromJSON, decode, encode, ToJSON, withObject, (.:))
+import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
-import ERPNext.Client.Helper (urlEncode)
+import ERPNext.Client.Helper (urlEncode, encodeToText)
 
 -- | API client configuration.
 data Config = Config
@@ -85,10 +89,17 @@ instance Functor ApiResponse where
   fmap f (Ok response val x) = Ok response val (f x)
   fmap _ (Err response err)  = Err response err
 
+showJsonResponsePretty :: ApiResponse a -> String
+showJsonResponsePretty (Ok _ val _) = TL.unpack $ decodeUtf8 $ encodePretty val
+showJsonResponsePretty (Err _ (Just (val, _))) = TL.unpack $ decodeUtf8 $ encodePretty val
+showJsonResponsePretty (Err response Nothing) = "Invalid JSON response. HTTP response: "
+   ++ show (statusCode (responseStatus response)) ++ " "
+   ++ BS8.unpack (statusMessage (responseStatus response))
+
 -- | Create the API 'Request'.
 createRequest :: Config -> Text -> BS.ByteString -> IO Request
 createRequest config path method = do
-  request <- parseRequest $ T.unpack (baseUrl config <> path)
+  request <- parseRequest $ unpack (baseUrl config <> path)
   return request
     { method = method
     , requestHeaders = [mkAuthHeader config]
@@ -97,7 +108,7 @@ createRequest config path method = do
 -- | Create the API 'Request' with a JSON body.
 createRequestWithBody :: ToJSON a => Config -> Text -> BS.ByteString -> a -> IO Request
 createRequestWithBody config path method doc = do
-  request <- parseRequest $ T.unpack (baseUrl config <> path)
+  request <- parseRequest $ unpack (baseUrl config <> path)
   return request
     { method = method
     , requestHeaders = mkAuthHeader config : [(hContentType, encodeUtf8 "application/json")]
