@@ -42,4 +42,3 @@ quote t = "\"" <> sanitizeQuotes t <> "\""
 -- that could make this one redundant.
 tshow :: Show a => a -> Text
 tshow = pack . show
-

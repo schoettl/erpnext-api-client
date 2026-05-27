@@ -131,10 +131,10 @@ parseDeleteResponse response =
 getDocList :: Manager
            -> Config
            -> Text -- ^ DocType name
-           -> Maybe Text -- ^ Optional query string filter
+           -> Maybe Text -- ^ Optional query string filter, not URL-encoded
            -> IO (ApiResponse [Value])
 getDocList manager config docTypeName mFilter = do
-  let path = "/resource/" <> urlEncode docTypeName <> maybe "" ("?" <>) mFilter
+  let path = "/resource/" <> urlEncode docTypeName <> maybe "" (("?" <>) . urlEncode) mFilter
   request <- createRequest config path "GET"
   response <- httpLbs request manager
   return $ parseGetResponse response
