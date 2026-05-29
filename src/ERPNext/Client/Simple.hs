@@ -144,12 +144,12 @@ parseDeleteResponse response =
 -- | Get a list of documents for a given DocType name.
 --
 -- The passed query string is used as is. To properly encode it, use
--- 'ERPNext.Helper.urlEncodePieces'.
+-- 'ERPNext.Helper.urlEncodeQueryString'.
 -- It's a bit tricky because both, ERPNext and the http-client package
 -- have certain expectations on how the query string must be encoded.
 --
 -- @
--- res <- getDocList manager config "Customer" (Just $ urlEncodePieces "fields=[\"customer_name\"]&page_limit_length=10")
+-- res <- getDocList manager config "Customer" (Just $ urlEncodeQueryString "fields=[\"customer_name\"]&page_limit_length=10")
 -- @
 --
 getDocList :: Manager

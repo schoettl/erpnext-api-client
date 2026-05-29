@@ -2,7 +2,7 @@
 
 module ERPNext.Client.Helper
   ( urlEncode
-  , urlEncodePieces
+  , urlEncodeQueryString
   , urlDecode
   , quote
   , tshow
@@ -26,12 +26,12 @@ urlEncode = pack . escapeURIString isUnreserved . unpack
 --
 -- This retains "&" to separate key-value pairs and "=" to separate keys from values.
 --
--- >>> urlEncodePieces $ pack "fields=[\"project_name\"]&page_limit_length=10"
+-- >>> urlEncodeQueryString $ pack "fields=[\"project_name\"]&page_limit_length=10"
 -- "fields=%5B%22project_name%22%5D&page_limit_length=10"
-urlEncodePieces :: Text -> Text
-urlEncodePieces = pack . escapeURIString isUnresveredInPiece . unpack
+urlEncodeQueryString :: Text -> Text
+urlEncodeQueryString = pack . escapeURIString isUnresveredInQueryString . unpack
   where
-    isUnresveredInPiece c = isUnreserved c || c `elem` ("&=" :: String)
+    isUnresveredInQueryString c = isUnreserved c || c `elem` ("&=" :: String)
 
 -- | Opposite of 'urlEncode'.
 --
