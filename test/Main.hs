@@ -3,7 +3,7 @@
 module Main (main) where
 
 import ERPNext.Client.Helper
-import ERPNext.Client.QueryStringParams
+import ERPNext.Client.QueryStringParam
 import Test.DocTest
 import Data.Text
 import Data.Text qualified as T
@@ -16,7 +16,7 @@ main :: IO ()
 main = do
   doctest ["src/"]
   hspec $ do
-   describe "ERPNext.Client.QueryStringParams" $ do
+   describe "ERPNext.Client.QueryStringParam" $ do
     describe "renderQueryStringParams" $ do
       it "escapes quote and comma" $ do
         renderQueryStringParams [Asc "\","] `shouldBe` "order_by=%22%2C%20asc"

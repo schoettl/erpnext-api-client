@@ -27,9 +27,15 @@ module ERPNext.Client
   , QueryStringParam (..)
   , ApiResponse (..)
   , DocType (..)
+  , Fieldname
   , getResponse
+  , andThen
   , andThenWith
   , getDocListAllFields
+  , getAllFieldnames
+  , systemFieldnames
+  , systemFieldnamesChild
+  , showJsonResponsePretty
   ) where
 
 import Network.HTTP.Client (Response (..), Manager)
@@ -37,9 +43,10 @@ import Data.Text hiding (map, filter, null)
 import Data.Aeson
 import Data.ByteString.Lazy qualified as LBS
 import Data.Maybe (mapMaybe)
-import ERPNext.Client.QueryStringParams
+import ERPNext.Client.Filter (Fieldname)
+import ERPNext.Client.QueryStringParam
 import ERPNext.Client.Simple qualified as Simple
-import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig)
+import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig, showJsonResponsePretty)
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name but there can still be multiple
@@ -57,7 +64,7 @@ class IsDocType a where
 
   Warning: The resulting list is limited to 20 items by default
   (@limit_page_length=20@, see API documentation <https://docs.frappe.io/framework/user/en/api/rest#listing-documents>).
-  Use 'ERPNext.Client.QueryStringParams.LimitPageLength' to set a different limit.
+  Use 'ERPNext.Client.QueryStringParam.LimitPageLength' to set a different limit.
 -}
 getDocList :: forall a. (IsDocType a, FromJSON a)
                => Manager -> Config -> [QueryStringParam] -> IO (ApiResponse [a])
@@ -82,13 +89,12 @@ getDocListAllFields :: forall a. (IsDocType a, FromJSON a)
                => Manager
                -> Config
                -> [QueryStringParam]
-               -> IO (ApiResponse DocType, Maybe (ApiResponse [a]))
+               -> IO (ApiResponse [Fieldname], Maybe (ApiResponse [a]))
 getDocListAllFields manager config qsParams = do
-  getDoc @DocType manager config (docTypeName @a)
-    `andThenWithFields`
-    (\fieldNames -> getDocList manager config $ Fields fieldNames : filter noFields qsParams)
+  getAllFieldnames @a manager config
+    `andThen`
+    (\fieldnames -> getDocList manager config $ Fields fieldnames : filter noFields qsParams)
   where
-    andThenWithFields = andThenWith dtFieldNames
     noFields (Fields _) = False
     noFields _ = True
 
@@ -146,7 +152,6 @@ passing some part of A's result to B. This can reduce the number of case
 expressions to one.
 
 @
-  TODO:untested
   let andThen = andThenWith customer
   (salesOrder', mCustomer') <- getDoc @SalesOrder mgr cfg "SAL-ORD-2025-00031"
                                 `andThen` getDoc @Customer mgr cfg
@@ -188,9 +193,15 @@ andThenWith f io1 io2 = do
       res <- io2 (f x)
       return (res1, Just res)
 
+andThen
+  :: IO (ApiResponse a)
+  -> (a -> IO (ApiResponse b))
+  -> IO (ApiResponse a, Maybe (ApiResponse b))
+andThen = andThenWith id
+
 data DocType = DocType
   { dtName :: Text
-  , dtFieldNames :: [Text]
+  , dtFieldnames :: [Text]
   }
   deriving (Show)
 
@@ -207,3 +218,22 @@ instance FromJSON DocType where
 instance IsDocType DocType where
   docTypeName = "DocType"
   docName = dtName
+
+getAllFieldnames :: forall a. (IsDocType a)
+               => Manager
+               -> Config
+               -> IO (ApiResponse [Fieldname])
+getAllFieldnames manager config = do
+  res <- getDoc @DocType manager config (docTypeName @a)
+  return $ dtFieldnames <$> res
+
+-- | Fixed ERPNext system field names that all DocTypes have in common.
+--
+-- These are not included in 'getAllFieldnames's response.
+systemFieldnames :: [Fieldname]
+systemFieldnames =
+  [ "_assign"
+  , "_user_tags"
+  , "_liked_by"
+  , "_comments"
+  ]

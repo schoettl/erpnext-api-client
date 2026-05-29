@@ -17,7 +17,6 @@ module ERPNext.Client.Simple
   , mkSecret
   , mkConfig
   , showJsonResponsePretty
-  , showJsonPretty
   , ApiResponse (..)
   , Config
   , Secret
@@ -27,14 +26,11 @@ import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parse
 import Network.HTTP.Types (hAuthorization, hContentType, Header, statusCode, statusMessage)
 import Data.ByteString.Char8 qualified as BS8
 import Data.Text hiding (show)
-import Data.Text.Lazy qualified as TL
 import Data.Text.Encoding (encodeUtf8)
-import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Aeson (Value, FromJSON (..), Result (..), fromJSON, decode, encode, ToJSON, withObject, (.:))
-import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
-import ERPNext.Client.Helper (urlEncode)
+import ERPNext.Client.Helper (urlEncode, showJsonPretty)
 
 -- | API client configuration.
 data Config = Config
@@ -93,12 +89,12 @@ instance Functor ApiResponse where
 showJsonResponsePretty :: ApiResponse a -> String
 showJsonResponsePretty (Ok _ val _) = showJsonPretty val
 showJsonResponsePretty (Err _ (Just (val, _))) = showJsonPretty val
-showJsonResponsePretty (Err response Nothing) = "Invalid JSON response. HTTP response: "
-   ++ show (statusCode (responseStatus response)) ++ " "
-   ++ BS8.unpack (statusMessage (responseStatus response))
-
-showJsonPretty :: ToJSON a => a -> String
-showJsonPretty = TL.unpack . decodeUtf8 . encodePretty
+showJsonResponsePretty (Err response Nothing) =
+  "Invalid JSON response. HTTP response: "
+   ++ show (statusCode status) ++ " "
+   ++ BS8.unpack (statusMessage status)
+  where
+    status = responseStatus response
 
 -- | Create the API 'Request'.
 createRequest :: Config -> Text -> BS.ByteString -> IO Request
