@@ -105,6 +105,8 @@ Then, inside this repository directory you can run:
   import ERPNext.Client.Filter
   import Network.HTTP.Client.TLS
   import System.Environment
+  import Data.Aeson
+  import GHC.Generics
 
   url <- pack <$> getEnv "ERPNEXT_BASE_URL"
   apiKey <- pack <$> getEnv "ERPNEXT_API_KEY"
@@ -113,16 +115,29 @@ Then, inside this repository directory you can run:
   let config = mkConfig url apiKey apiSecret
   manager <- newTlsManager
 
-  -- Infer requested doctype via type system, @DocType in this example:
-  Ok _ jsonResponse parsedResponse <- Client.getDoc @DocType manager config "Task"
-  print parsedResponse
-
-  Ok _ jsonResponse parsedResponse <- Client.getDocList @DocType manager config [Fields ["name"], AndFilter [Like "name" "%User%"]]
-  print parsedResponse
-
   -- Explicitly name the doctype to fetch, "DocType" in this example:
-  Ok _ jsonResponse2 _ <- Simple.getDoc manager config "DocType" "Task"
-  putStrLn $ showJsonPretty jsonResponse2
+  Ok _ jsonResponse _ <- Simple.getDoc manager config "DocType" "Task"
+  putStrLn $ showJsonPretty jsonResponse
+
+  -- Define a DocType. Use :{ and :} in GHCi to paste multi-line Haskell code.
+  data Customer = Customer
+    { name :: Text
+    , customer_name :: Text
+    } deriving (Show, Generic)
+  instance FromJSON Customer
+  instance IsDocType Customer where
+    docTypeName = "Customer"
+    docName = name
+
+  -- Get a customer, infer doctype via type system:
+  Ok _ jsonResponse parsedCustomer <- Client.getDoc @Customer manager config "Company A"
+  print parsedCustomer
+  print $ docName parsedCustomer
+
+  -- Get a filtered list of customers, infer doctype via type system:
+  Ok _ jsonResponse parsedCustomerList <- Client.getDocList @Customer manager config [Fields ["name", "customer_name"], AndFilter [Like "name" "%Test%"]]
+  print parsedCustomerList
+
 #+end_src
 
 ** Advanced example use
