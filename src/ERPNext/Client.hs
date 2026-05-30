@@ -40,7 +40,6 @@ import Network.HTTP.Client (Response (..), Manager)
 import Data.Text hiding (map, filter, null)
 import Data.Aeson
 import Data.ByteString.Lazy qualified as LBS
-import Data.Maybe (mapMaybe)
 import ERPNext.Client.Filter (Fieldname)
 import ERPNext.Client.QueryStringParam
 import ERPNext.Client.Simple qualified as Simple
@@ -63,22 +62,19 @@ class IsDocType a where
   Warning: The resulting list is limited to 20 items by default
   (@limit_page_length=20@, see API documentation <https://docs.frappe.io/framework/user/en/api/rest#listing-documents>).
   Use 'ERPNext.Client.QueryStringParam.LimitPageLength' to set a different limit.
-
-  Warning: Without a 'ERPNext.Client.QueryStringParam.Fields'
-  parameter that covers *all* fields required by the record type to
-  parse to, the result will be an empty list!
-  TODO: 'Err' instead of 'Ok' would be a better result in this case.
 -}
 getDocList :: forall a. (IsDocType a, FromJSON a)
                => Manager -> Config -> [QueryStringParam] -> IO (ApiResponse [a])
 getDocList manager config qsParams = do
   let queryString = if null qsParams then Nothing else Just (renderQueryStringParams qsParams)
   response <- Simple.getDocList manager config (docTypeName @a) queryString
-  return $ fmap (mapMaybe parseValue) response
+  return $ parseListResponse response
   where
-    parseValue v = case fromJSON v of
-      Success a -> Just a
-      Error _ -> Nothing
+    parseListResponse (Err resp err) = Err resp err
+    parseListResponse (Ok resp val values) =
+      case traverse fromJSON values of
+        Success parsedList -> Ok resp val parsedList
+        Error err -> Err resp (Just (val, pack err))
 
 {-|
   Get a list of all documents of a given DocType including all fields.
