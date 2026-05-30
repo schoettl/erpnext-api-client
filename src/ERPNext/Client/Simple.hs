@@ -86,6 +86,8 @@ instance Functor ApiResponse where
   fmap f (Ok response val x) = Ok response val (f x)
   fmap _ (Err response err)  = Err response err
 
+-- | Pretty-print JSON API response or print HTTP status and message
+-- if response is no valid JSON.
 showJsonResponsePretty :: ApiResponse a -> String
 showJsonResponsePretty (Ok _ val _) = showJsonPretty val
 showJsonResponsePretty (Err _ (Just (val, _))) = showJsonPretty val

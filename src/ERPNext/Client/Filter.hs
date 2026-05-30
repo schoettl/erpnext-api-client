@@ -12,6 +12,9 @@ import Data.Time.Calendar (Day)
 import Data.String
 import ERPNext.Client.Helper
 
+-- | Filter that can be used as arguments for
+-- 'ERPNext.Client.QueryStringParam.AndFilter' or
+-- 'ERPNext.Client.QueryStringParam.OrFilter'.
 data Filter
   = Eq Fieldname FilterValue
   | NotEq Fieldname FilterValue

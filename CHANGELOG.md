@@ -18,8 +18,15 @@ and this project adheres to the
 
 ### Added
 
+- `getAllFields` to fetch names of all fields for a given DocType.
 - `getDocListAllFields` to fetch list of documents with all their
   fields without explicitly naming them.
+- `systemFieldnames` to define some fixed fieldnames like `_user_tags` and `_assign`.
+- `IsString` instance for `FilterValue` so that `"my value"` is
+  automatically converted to `FilterText "my value"`.
+- `showJsonPretty` and `showJsonResponsePretty` for debugging and
+  pretty-printing JSON API responses (adds dependency `aeson-pretty`.
+- `andThen` to concatenate two API calls passing the result of A directly to B.
 
 ## [0.2.1.0] - 2026-03-13
 

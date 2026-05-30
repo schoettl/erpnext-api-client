@@ -34,7 +34,6 @@ module ERPNext.Client
   , getDocListAllFields
   , getAllFieldnames
   , systemFieldnames
-  , systemFieldnamesChild
   , showJsonResponsePretty
   ) where
 
