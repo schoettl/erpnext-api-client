@@ -39,6 +39,7 @@ module ERPNext.Client
 import Network.HTTP.Client (Response (..), Manager)
 import Data.Text hiding (map, filter, null)
 import Data.Aeson
+import Data.Aeson.Types (parseEither)
 import Data.ByteString.Lazy qualified as LBS
 import ERPNext.Client.Filter (Fieldname)
 import ERPNext.Client.QueryStringParam
@@ -198,26 +199,6 @@ andThen
   -> IO (ApiResponse a, Maybe (ApiResponse b))
 andThen = andThenWith id
 
-data DocType = DocType
-  { dtName :: Text
-  , dtFieldnames :: [Text]
-  }
-  deriving (Show)
-
-instance FromJSON DocType where
-  parseJSON = withObject "DocType" $ \obj -> do
-    name <- obj .: "name"
-    fieldsArray <- obj .: "fields"
-    fieldNames <- mapM extractFieldName fieldsArray
-    return $ DocType name fieldNames
-    where
-      extractFieldName = withObject "Field" $ \fieldObj ->
-        fieldObj .: "fieldname"
-
-instance IsDocType DocType where
-  docTypeName = "DocType"
-  docName = dtName
-
 -- | Get all fieldnames for a given DocType. These won't include the
 -- fields from 'systemFieldnames'.
 getAllFieldnames :: forall a. (IsDocType a)
@@ -225,8 +206,21 @@ getAllFieldnames :: forall a. (IsDocType a)
                -> Config
                -> IO (ApiResponse [Fieldname])
 getAllFieldnames manager config = do
-  res <- getDoc @DocType manager config (docTypeName @a)
-  return $ dtFieldnames <$> res
+  response <- Simple.getDoc manager config "DocType" (docTypeName @a)
+  return $ parseResponse response
+  where
+    parseResponse (Err resp err) = Err resp err
+    parseResponse (Ok resp val jsonVal) =
+      case parseEither parseFieldnames jsonVal of
+        Right fieldnames -> Ok resp val fieldnames
+        Left err -> Err resp (Just (val, pack err))
+
+    parseFieldnames = withObject "DocType" $ \obj -> do
+      fieldsArray <- obj .: "fields"
+      mapM extractFieldName fieldsArray
+      where
+        extractFieldName = withObject "Field" $ \fieldObj ->
+          fieldObj .: "fieldname"
 
 -- | Fixed ERPNext system field names that all DocTypes have in common.
 --
