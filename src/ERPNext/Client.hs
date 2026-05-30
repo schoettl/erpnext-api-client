@@ -26,7 +26,6 @@ module ERPNext.Client
   , Secret
   , QueryStringParam (..)
   , ApiResponse (..)
-  , DocType (..)
   , Fieldname
   , getResponse
   , andThen
@@ -64,6 +63,11 @@ class IsDocType a where
   Warning: The resulting list is limited to 20 items by default
   (@limit_page_length=20@, see API documentation <https://docs.frappe.io/framework/user/en/api/rest#listing-documents>).
   Use 'ERPNext.Client.QueryStringParam.LimitPageLength' to set a different limit.
+
+  Warning: Without a 'ERPNext.Client.QueryStringParam.Fields'
+  parameter that covers *all* fields required by the record type to
+  parse to, the result will be an empty list!
+  TODO: 'Err' instead of 'Ok' would be a better result in this case.
 -}
 getDocList :: forall a. (IsDocType a, FromJSON a)
                => Manager -> Config -> [QueryStringParam] -> IO (ApiResponse [a])

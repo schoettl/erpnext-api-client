@@ -101,6 +101,8 @@ Then, inside this repository directory you can run:
   {-# LANGUAGE OverloadedStrings #-}
   import ERPNext.Client qualified as Client
   import ERPNext.Client.Simple qualified as Simple
+  import ERPNext.Client.QueryStringParam
+  import ERPNext.Client.Filter
   import Network.HTTP.Client.TLS
   import System.Environment
 
@@ -113,6 +115,9 @@ Then, inside this repository directory you can run:
 
   -- Infer requested doctype via type system, @DocType in this example:
   Ok _ jsonResponse parsedResponse <- Client.getDoc @DocType manager config "Task"
+  print parsedResponse
+
+  Ok _ jsonResponse parsedResponse <- Client.getDocList @DocType manager config [Fields ["name"], AndFilter [Like "name" "%User%"]]
   print parsedResponse
 
   -- Explicitly name the doctype to fetch, "DocType" in this example:
