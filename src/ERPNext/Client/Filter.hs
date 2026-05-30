@@ -15,6 +15,9 @@ import ERPNext.Client.Helper
 -- | Filter that can be used as arguments for
 -- 'ERPNext.Client.QueryStringParam.AndFilter' or
 -- 'ERPNext.Client.QueryStringParam.OrFilter'.
+--
+-- The filters are case-insensitive on API server side!
+-- I verified by testing this with 'Eq', 'Like', and 'In'.
 data Filter
   = Eq Fieldname FilterValue
   | NotEq Fieldname FilterValue
