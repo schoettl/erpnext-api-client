@@ -218,6 +218,8 @@ instance IsDocType DocType where
   docTypeName = "DocType"
   docName = dtName
 
+-- | Get all fieldnames for a given DocType. These won't include the
+-- fields from 'systemFieldnames'.
 getAllFieldnames :: forall a. (IsDocType a)
                => Manager
                -> Config
