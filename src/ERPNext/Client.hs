@@ -53,6 +53,10 @@ class IsDocType a where
   -- | The DocType name, e.g. „Sales Order“.
   docTypeName :: Text
   -- | The document identifier - called @name@ in ERPNext.
+  --
+  -- Caveat: A type implementing this class may not have the name
+  -- field or its value may be 'Nothing', for example when the record
+  -- is used with POST to create a new document.
   docName :: a -> Text
 
 {-|

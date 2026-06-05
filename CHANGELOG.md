@@ -6,6 +6,14 @@ and this project adheres to the
 
 ## [0.3.0.0] - 
 
+### Fixed
+
+- `getDocList`: When the list of requested fields was not exhaustive
+  to parse into the specified record type, `getDocList` ended up to
+  parse the response into `Ok _ _ []` instead of `Err _ _`. With this
+  bug the response looked like we got no results but in reality it was
+  just wrong API use.
+
 ### Changed
 
 - Fix names in public API because these functions don't operate on
