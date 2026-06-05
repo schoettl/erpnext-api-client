@@ -20,8 +20,8 @@ library
   exposed-modules:     ERPNext.Client
                      , ERPNext.Client.Simple
                      , ERPNext.Client.Helper
-                     , ERPNext.Client.Filters
-                     , ERPNext.Client.QueryStringParams
+                     , ERPNext.Client.Filter
+                     , ERPNext.Client.QueryStringParam
   build-depends:       base >= 4.7 && < 5
                      , http-client
                      , http-types
@@ -47,8 +47,8 @@ test-suite tests
   main-is:             Main.hs
   other-modules:       ERPNext.Client
                      , ERPNext.Client.Helper
-                     , ERPNext.Client.Filters
-                     , ERPNext.Client.QueryStringParams
+                     , ERPNext.Client.Filter
+                     , ERPNext.Client.QueryStringParam
   hs-source-dirs:      test
                      , src
   build-depends:       base

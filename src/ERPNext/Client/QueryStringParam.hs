@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ERPNext.Client.QueryStringParams
+module ERPNext.Client.QueryStringParam
   ( QueryStringParam (..)
   , renderQueryStringParams
   ) where
 
-import ERPNext.Client.Filters
+import ERPNext.Client.Filter
 import ERPNext.Client.Helper
 import Data.Text hiding (map)
 

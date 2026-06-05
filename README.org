@@ -101,8 +101,12 @@ Then, inside this repository directory you can run:
   {-# LANGUAGE OverloadedStrings #-}
   import ERPNext.Client qualified as Client
   import ERPNext.Client.Simple qualified as Simple
+  import ERPNext.Client.QueryStringParam
+  import ERPNext.Client.Filter
   import Network.HTTP.Client.TLS
   import System.Environment
+  import Data.Aeson
+  import GHC.Generics
 
   url <- pack <$> getEnv "ERPNEXT_BASE_URL"
   apiKey <- pack <$> getEnv "ERPNEXT_API_KEY"
@@ -111,13 +115,99 @@ Then, inside this repository directory you can run:
   let config = mkConfig url apiKey apiSecret
   manager <- newTlsManager
 
-  -- Infer requested doctype via type system, @DocType in this example:
-  Ok _ jsonResponse parsedResponse <- Client.getDoc @DocType manager config "Task"
-  print parsedResponse
-
   -- Explicitly name the doctype to fetch, "DocType" in this example:
-  Ok _ jsonResponse2 _ <- Simple.getDoc manager config "DocType" "Task"
-  putStrLn $ showJsonPretty jsonResponse2
+  Ok _ jsonResponse _ <- Simple.getDoc manager config "DocType" "Task"
+  putStrLn $ showJsonPretty jsonResponse
+
+  -- Define a DocType. Use :{ and :} in GHCi to paste multi-line Haskell code.
+  data Customer = Customer
+    { name :: Text
+    , customer_name :: Text
+    } deriving (Show, Generic)
+  instance FromJSON Customer
+  instance IsDocType Customer where
+    docTypeName = "Customer"
+    docName = name
+
+  -- Get a customer, infer doctype via type system:
+  Ok _ jsonResponse parsedCustomer <- Client.getDoc @Customer manager config "Company A"
+  print parsedCustomer
+  print $ docName parsedCustomer
+
+  -- Get a filtered list of customers, infer doctype via type system:
+  Ok _ jsonResponse parsedCustomerList <- Client.getDocList @Customer manager config [Fields ["name", "customer_name"], AndFilter [Like "name" "%Test%"]]
+  print parsedCustomerList
+
+#+end_src
+
+** Advanced example use
+
+#+begin_src haskell :tangle example2.hs
+  {-# LANGUAGE OverloadedStrings #-}
+  {-# LANGUAGE OverloadedRecordDot #-}
+  {-# LANGUAGE DuplicateRecordFields #-}
+
+  import ERPNext.Client
+  import ERPNext.Client.Filter as Filter
+  import ERPNext.Client.QueryStringParam
+  import System.Environment
+  import Data.Text (Text, pack, unpack, intercalate)
+  import Network.HTTP.Client.TLS
+  import Data.Aeson
+  import GHC.Generics
+
+  data Customer = Customer
+    { name :: Text
+    , customer_name :: Text
+    } deriving Generic
+
+  instance FromJSON Customer
+  instance IsDocType Customer where
+    docTypeName = "Customer"
+    docName = error "not implemented"
+
+  data SalesOrder = SalesOrder
+    { name :: Text
+    , customer :: Text
+    } deriving Generic
+
+  instance FromJSON SalesOrder
+  instance IsDocType SalesOrder where
+    docTypeName = "Sales Order"
+    docName = error "not implemented"
+
+  main :: IO ()
+  main = do
+    url <- pack <$> getEnv "ERPNEXT_BASE_URL" -- e.g. "https://my-erpnext.frappe.cloud/api"
+    apiKey <- pack <$> getEnv "ERPNEXT_API_KEY"
+    apiSecret <- mkSecret . pack <$> getEnv "ERPNEXT_API_SECRET"
+
+    let cfg = mkConfig url apiKey apiSecret
+    mgr <- newTlsManager
+
+    -- Get all customers with given customer name:
+    customersRes <- getDocList @Customer mgr cfg [Fields ["name", "customer_name"], AndFilter [Filter.Eq "customer_name" "Test Customer"]]
+    case customersRes of
+      Ok _ _ customers -> putStrLn $ show (length customers) ++ " customer(s)"
+      err  -> putStrLn $ "error: \n" ++ showJsonResponsePretty err
+
+    -- Get customer linked to sales order:
+    let andThenWithCustomer = andThenWith (\o -> o.customer)
+    (salesOrderRes, mCustomerRes) <- getDoc @SalesOrder mgr cfg "SAL-ORD-2026-00002"
+                                `andThenWithCustomer` getDoc @Customer mgr cfg
+    case (salesOrderRes, mCustomerRes) of
+      (Ok _ _ salesOrder, Just (Ok _ _ customer)) -> putStrLn $ unpack salesOrder.name ++ ": " ++ unpack customer.customer_name
+      (x, my) -> putStrLn $ "error: \n" ++ showJsonResponsePretty x ++ "\n" ++ maybe "" showJsonResponsePretty my
+
+    res <- getAllFieldnames @Customer mgr cfg
+    case res of
+      Ok _ _ fieldnames -> putStrLn $ unpack $ intercalate ", " (take 5 fieldnames) <> ", ..."
+      err -> putStrLn $ "error: \n" ++ showJsonResponsePretty res
+#+end_src
+
+#+begin_src sh
+  . .env
+  stack runhaskell --package http-client-tls example2.hs
 #+end_src
 
 ** Scope and Limits

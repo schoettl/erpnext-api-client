@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ERPNext.Client.Filters
+module ERPNext.Client.Filter
   ( Filter (..)
   , Fieldname
   , FilterValue (..)
@@ -9,8 +9,15 @@ module ERPNext.Client.Filters
 
 import Data.Text (Text, intercalate, pack) -- pack is used in doctests!
 import Data.Time.Calendar (Day)
+import Data.String
 import ERPNext.Client.Helper
 
+-- | Filter that can be used as arguments for
+-- 'ERPNext.Client.QueryStringParam.AndFilter' or
+-- 'ERPNext.Client.QueryStringParam.OrFilter'.
+--
+-- The filters are case-insensitive on API server side!
+-- I verified by testing this with 'Eq', 'Like', and 'In'.
 data Filter
   = Eq Fieldname FilterValue
   | NotEq Fieldname FilterValue
@@ -33,6 +40,9 @@ data FilterValue
   | FilterBool Bool
   | FilterDay Day
   deriving (Show, Eq)
+
+instance IsString FilterValue where
+  fromString = FilterText . pack
 
 renderFilter :: Filter -> Text
 renderFilter f =

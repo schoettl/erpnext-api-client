@@ -4,6 +4,7 @@ module ERPNext.Client.Helper
   ( urlEncode
   , urlEncodeQueryString
   , urlDecode
+  , showJsonPretty
   , quote
   , tshow
   , Fieldname
@@ -11,6 +12,10 @@ module ERPNext.Client.Helper
 
 import Data.Text (Text, pack, unpack, replace)
 import Network.URI (escapeURIString, isUnreserved, unEscapeString)
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Encoding (decodeUtf8)
+import Data.Aeson (ToJSON)
+import Data.Aeson.Encode.Pretty (encodePretty)
 
 -- | Type for field names of DocTypes.
 type Fieldname = Text
@@ -39,6 +44,10 @@ urlEncodeQueryString = pack . escapeURIString isUnresveredInQueryString . unpack
 -- " "
 urlDecode :: Text -> Text
 urlDecode = pack . unEscapeString . unpack
+
+-- | Show JSON in pretty-print format.
+showJsonPretty :: ToJSON a => a -> String
+showJsonPretty = TL.unpack . decodeUtf8 . encodePretty  -- TODO: better use decodeUtf8Lenient?
 
 sanitizeQuotes :: Text -> Text
 sanitizeQuotes = replace "\"" "\\\""
