@@ -7,6 +7,8 @@ module ERPNext.Client.Helper
   , showJsonPretty
   , quote
   , tshow
+  , isNotFound
+  , isForbidden
   , Fieldname
   ) where
 
@@ -16,6 +18,8 @@ import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Aeson (ToJSON)
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Network.HTTP.Client
+import Network.HTTP.Types (Status(statusCode))
 
 -- | Type for field names of DocTypes.
 type Fieldname = Text
@@ -63,3 +67,11 @@ quote t = "\"" <> sanitizeQuotes t <> "\""
 -- that could make this one redundant.
 tshow :: Show a => a -> Text
 tshow = pack . show
+
+-- | Test if response is HTTP 404 Not Found.
+isNotFound :: Response a -> Bool
+isNotFound = (==404) . statusCode . responseStatus
+
+-- | Test if response is HTTP 403 Forbidden.
+isForbidden :: Response a -> Bool
+isForbidden = (==403) . statusCode . responseStatus
