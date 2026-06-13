@@ -25,9 +25,10 @@ module ERPNext.Client.Simple
 import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..))
 import Network.HTTP.Types (hAuthorization, hContentType, Header, statusCode, statusMessage)
 import Data.ByteString.Char8 qualified as BS8
-import Data.Text hiding (show)
+import Data.Text hiding (show, length, concatMap, null)
 import Data.Text.Encoding (encodeUtf8)
-import Data.Aeson (Value, FromJSON (..), Result (..), fromJSON, decode, encode, ToJSON, withObject, (.:))
+import Data.Aeson (Value (..), FromJSON (..), Result (..), fromJSON, decode, encode, ToJSON, withObject, (.:))
+import Data.Aeson.KeyMap qualified as KeyMap
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import ERPNext.Client.Helper (urlEncode, showJsonPretty)
@@ -90,13 +91,28 @@ instance Functor ApiResponse where
 -- if response is no valid JSON.
 showJsonResponsePretty :: ApiResponse a -> String
 showJsonResponsePretty (Ok _ val _) = showJsonPretty val
-showJsonResponsePretty (Err _ (Just (val, _))) = showJsonPretty val
+showJsonResponsePretty (Err _ (Just (val, _))) =
+  let mainOutput = showJsonPretty val
+      excOutput = maybe "" ("\n\nParsed \"exc\" field:\n" ++) $ extractExceptionTraceback val
+  in mainOutput ++ excOutput
 showJsonResponsePretty (Err response Nothing) =
   "Invalid JSON response. HTTP response: "
    ++ show (statusCode status) ++ " "
    ++ BS8.unpack (statusMessage status)
   where
     status = responseStatus response
+
+-- | Extract and parse the "exc" field content from a JSON object.
+extractExceptionTraceback :: Value -> Maybe String
+extractExceptionTraceback (Object obj) = do
+  String excStr <- KeyMap.lookup "exc" obj
+  Array arr <- decode @Value $ LBS.fromStrict $ encodeUtf8 excStr
+  let content = concatMap extractStringContent arr
+  if null content then Nothing else Just content
+  where
+    extractStringContent (String s) = unpack s
+    extractStringContent _ = ""
+extractExceptionTraceback _ = Nothing
 
 -- | Create the API 'Request'.
 createRequest :: Config -> Text -> BS.ByteString -> IO Request
