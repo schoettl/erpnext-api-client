@@ -9,8 +9,6 @@ module ERPNext.Client.Helper
   , tshow
   , isNotFound
   , isForbidden
-  , toBool
-  , fromBool
   , Fieldname
   ) where
 
@@ -69,15 +67,6 @@ quote t = "\"" <> sanitizeQuotes t <> "\""
 -- that could make this one redundant.
 tshow :: Show a => a -> Text
 tshow = pack . show
-
--- | Decode from ERPNext bool representation.
-toBool :: Int -> Bool
-toBool i = i /= 0
-
--- | Encode to ERPNext bool representation.
-fromBool :: Bool -> Int
-fromBool False = 0
-fromBool True = 1
 
 -- | Test if response is HTTP 404 Not Found.
 isNotFound :: Response a -> Bool
