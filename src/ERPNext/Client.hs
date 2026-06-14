@@ -34,17 +34,17 @@ module ERPNext.Client
   , getAllFieldnames
   , systemFieldnames
   , showJsonResponsePretty
+  , showApiResponseDebug
   ) where
 
-import Network.HTTP.Client (Response (..), Manager)
+import Network.HTTP.Client (Manager)
 import Data.Text hiding (map, filter, null)
 import Data.Aeson
 import Data.Aeson.Types (parseEither)
-import Data.ByteString.Lazy qualified as LBS
 import ERPNext.Client.Filter (Fieldname)
 import ERPNext.Client.QueryStringParam
 import ERPNext.Client.Simple qualified as Simple
-import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig, showJsonResponsePretty)
+import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig, showJsonResponsePretty, showApiResponseDebug, getResponse)
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name but there can still be multiple
@@ -136,11 +136,6 @@ putDoc :: forall a. (IsDocType a, FromJSON a, ToJSON a)
 putDoc manager config name doc = do
   response <- Simple.putDoc manager config (docTypeName @a) name (toJSON doc)
   return $ parseTypedResponse response
-
--- | Get the full response from the API response.
-getResponse :: ApiResponse a -> Response LBS.ByteString
-getResponse (Ok r _ _) = r
-getResponse (Err r _) = r
 
 -- Helper function to convert ApiResponse Value to ApiResponse a
 parseTypedResponse :: FromJSON a => ApiResponse Value -> ApiResponse a

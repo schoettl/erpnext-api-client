@@ -16,7 +16,9 @@ module ERPNext.Client.Simple
   , deleteDoc
   , mkSecret
   , mkConfig
+  , getResponse
   , showJsonResponsePretty
+  , showApiResponseDebug
   , ApiResponse (..)
   , Config
   , Secret
@@ -91,16 +93,24 @@ instance Functor ApiResponse where
 -- if response is no valid JSON.
 showJsonResponsePretty :: ApiResponse a -> String
 showJsonResponsePretty (Ok _ val _) = showJsonPretty val
-showJsonResponsePretty (Err _ (Just (val, _))) =
-  let mainOutput = showJsonPretty val
-      excOutput = maybe "" ("\n\nParsed \"exc\" field:\n" ++) $ extractExceptionTraceback val
-  in mainOutput ++ excOutput
-showJsonResponsePretty (Err response Nothing) =
-  "Invalid JSON response. HTTP response: "
-   ++ show (statusCode status) ++ " "
+showJsonResponsePretty (Err _ (Just (val, _))) = showJsonPretty val
+showJsonResponsePretty (Err _ Nothing) = "{}"
+
+showApiResponseDebug :: ApiResponse a -> String
+showApiResponseDebug response =
+  "HTTP " ++ show (statusCode status) ++ " "
    ++ BS8.unpack (statusMessage status)
+   ++ "\n\n"
+   ++ body
   where
-    status = responseStatus response
+    status = responseStatus $ getResponse response
+    body = case response of
+      (Ok _ val _) -> showJsonPretty val
+      (Err _ (Just (val, _))) ->
+        let mainOutput = showJsonPretty val
+            excOutput = maybe "" ("\n\nParsed \"exc\" field:\n" ++) $ extractExceptionTraceback val
+        in mainOutput ++ excOutput
+      (Err _ Nothing) -> "No valid JSON response."
 
 -- | Extract and parse the "exc" field content from a JSON object.
 extractExceptionTraceback :: Value -> Maybe String
@@ -113,6 +123,11 @@ extractExceptionTraceback (Object obj) = do
     extractStringContent (String s) = unpack s
     extractStringContent _ = ""
 extractExceptionTraceback _ = Nothing
+
+-- | Get the full response from the API response.
+getResponse :: ApiResponse a -> Response LBS.ByteString
+getResponse (Ok r _ _) = r
+getResponse (Err r _) = r
 
 -- | Create the API 'Request'.
 createRequest :: Config -> Text -> BS.ByteString -> IO Request
