@@ -46,7 +46,8 @@ awk -f- <<'AWK' "$modelsFile"
   print "      description: " entity
   print "      properties:"
 }
-/^ *(--.*)?$/ { entity = "" }
+/^ *$/ { entity = "" }
+/^ *--.*/ { next }
 /^ / && entity {
   if ($1 == "Required") {
     print "      required:"
