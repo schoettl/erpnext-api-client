@@ -6,6 +6,8 @@ set -e
 # models file like persistent's config/models file format
 declare modelsFile=$1
 
+declare -r partialEntitySuffix=Partial
+
 cat <<YAML
 openapi: 3.0.0
 info:
@@ -26,10 +28,12 @@ paths:
                 properties:
 YAML
 
-awk -f- <<'AWK' "$modelsFile"
+awk -v partialEntitySuffix="$partialEntitySuffix" -f- <<'AWK' "$modelsFile"
 /^[A-Z]/ {
   print "                  " $1 ":"
   print "                    $ref: '#/components/schemas/" $1 "'"
+  print "                  " $1 partialEntitySuffix ":"
+  print "                    $ref: '#/components/schemas/" $1 partialEntitySuffix"'"
 }
 AWK
 
@@ -38,9 +42,9 @@ components:
   schemas:
 YAML
 
-awk -f- <<'AWK' "$modelsFile"
+declare awkScript=$(cat <<'AWK'
 /^[A-Z]/ {
-  entity = $1
+  entity = $1 entitySuffix
   print "    " entity ":"
   print "      title: " entity
   print "      description: " entity
@@ -93,3 +97,14 @@ awk -f- <<'AWK' "$modelsFile"
   }
 }
 AWK
+)
+
+# Print OpenAPI spec as originally defined:
+echo
+awk -v entitySuffix='' -e "$awkScript" "$modelsFile"
+
+# Print OpenAPI spec without any required fields. This is useful for
+# putDoc/postDoc when you only want to set a limited number of fields and
+# for getDocList when you only want to fetch a subset of the fields defined.
+echo
+grep -vE '^ +Required .*' "$modelsFile" | awk -v entitySuffix="$partialEntitySuffix" -e "$awkScript"
