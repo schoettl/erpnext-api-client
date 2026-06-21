@@ -11,7 +11,10 @@ module ERPNext.Client.Types
 import Data.Aeson
 import Data.Scientific (toBoundedInteger)
 
--- | ERPNext Bool type.
+-- | ERPNext Bool type for use in your DocType record definition.
+--
+-- You cannot use 'Bool' there because ERPNext encodes boolean values as integer.
+-- Use this 'EBool' if you don't want to use 'Int'.
 newtype EBool = EBool { isTrue :: Bool }
 
 instance FromJSON EBool where
@@ -22,7 +25,9 @@ instance FromJSON EBool where
       Nothing -> fail $ "expected integer but got non-integer number: " ++ show n
   parseJSON v = fail $ "expected Bool or Number but got " ++ show v
 
--- | https://docs.frappe.io/framework/user/en/basics/doctypes/frameworktatus
+-- | DocType status type for use in your DocType record definition.
+--
+-- https://docs.frappe.io/framework/user/en/basics/doctypes/frameworktatus
 data DocStatus
   = Draft
   | Submitted
