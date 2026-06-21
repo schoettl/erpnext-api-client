@@ -9,14 +9,18 @@ module ERPNext.Client.Types
   ) where
 
 import Data.Aeson
+import Data.Scientific (toBoundedInteger)
 
 -- | ERPNext Bool type.
 newtype EBool = EBool { isTrue :: Bool }
 
 instance FromJSON EBool where
   parseJSON (Bool b) = return $ EBool b
-  parseJSON (Number i) = return $ EBool $ toBool $ round i -- TODO: fail if not integer
-  parseJSON _ = fail "expected integer (decoded as bool) but got something else" -- TODO
+  parseJSON (Number n) =
+    case toBoundedInteger n of
+      Just i -> return $ EBool $ toBool i
+      Nothing -> fail $ "expected integer but got non-integer number: " ++ show n
+  parseJSON v = fail $ "expected Bool or Number but got " ++ show v
 
 -- | https://docs.frappe.io/framework/user/en/basics/doctypes/frameworktatus
 data DocStatus
@@ -26,8 +30,11 @@ data DocStatus
   | Other Int
 
 instance FromJSON DocStatus where
-  parseJSON (Number i) = return $ toDocStatus $ round i -- TODO: if not integer throw error
-  parseJSON _ = fail "expected integer but got something else"
+  parseJSON (Number n) =
+    case toBoundedInteger n of
+      Just i -> return $ toDocStatus i
+      Nothing -> fail $ "expected integer but got non-integer number: " ++ show n
+  parseJSON v = fail $ "expected Number but got " ++ show v
 
 fromDocStatus :: DocStatus -> Int
 fromDocStatus status = case status of
