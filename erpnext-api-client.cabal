@@ -12,7 +12,7 @@ maintainer:          jakob.schoettl@intensovet.de
 copyright:           2025 Intensovet GmbH
 category:            API
 build-type:          Simple
-extra-source-files:  README.md
+extra-doc-files:     README.md
                      CHANGELOG.md
 
 library
