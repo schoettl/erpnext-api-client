@@ -1,5 +1,5 @@
 
-resolver: lts-24.45
+resolver: lts-24.46
 
 nix:
   enable: true
