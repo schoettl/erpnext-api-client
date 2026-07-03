@@ -3,8 +3,22 @@
 
 set -e
 
-# models file like persistent's config/models file format
-declare modelsFile=$1
+# Parse command line arguments
+declare generatePartials=false
+declare modelsFile=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -p)
+      generatePartials=true
+      shift
+      ;;
+    *)
+      modelsFile="$1"
+      shift
+      ;;
+  esac
+done
 
 declare -r partialEntitySuffix=Partial
 
@@ -28,7 +42,8 @@ paths:
                 properties:
 YAML
 
-awk -v partialEntitySuffix="$partialEntitySuffix" -f- <<'AWK' "$modelsFile"
+if [[ "$generatePartials" == true ]]; then
+  awk -v partialEntitySuffix="$partialEntitySuffix" -f- <<'AWK' "$modelsFile"
 /^[A-Z]/ {
   print "                  " $1 ":"
   print "                    $ref: '#/components/schemas/" $1 "'"
@@ -36,6 +51,14 @@ awk -v partialEntitySuffix="$partialEntitySuffix" -f- <<'AWK' "$modelsFile"
   print "                    $ref: '#/components/schemas/" $1 partialEntitySuffix"'"
 }
 AWK
+else
+  awk -f- <<'AWK' "$modelsFile"
+/^[A-Z]/ {
+  print "                  " $1 ":"
+  print "                    $ref: '#/components/schemas/" $1 "'"
+}
+AWK
+fi
 
 cat <<YAML
 components:
@@ -106,5 +129,7 @@ awk -v entitySuffix='' -e "$awkScript" "$modelsFile"
 # Print OpenAPI spec without any required fields. This is useful for
 # putDoc/postDoc when you only want to set a limited number of fields and
 # for getDocList when you only want to fetch a subset of the fields defined.
-echo
-grep -vE '^ +Required .*' "$modelsFile" | awk -v entitySuffix="$partialEntitySuffix" -e "$awkScript"
+if [[ "$generatePartials" == true ]]; then
+  echo
+  grep -vE '^ +Required .*' "$modelsFile" | awk -v entitySuffix="$partialEntitySuffix" -e "$awkScript"
+fi
