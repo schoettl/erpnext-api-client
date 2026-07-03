@@ -20,12 +20,12 @@ show_usage() {
 declare generatePartials=false
 declare modelsFile=""
 
-if [[ $# -eq 0 ]]; then
+if (( $# == 0 )); then
   show_usage
   exit 1
 fi
 
-while [[ $# -gt 0 ]]; do
+while (( $# > 0 )); do
   case $1 in
     -p)
       generatePartials=true
