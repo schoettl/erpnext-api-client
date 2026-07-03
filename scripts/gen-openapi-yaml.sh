@@ -3,17 +3,21 @@
 
 set -e
 
-show_usage() {
-  echo "Usage: $0 [-p] [-h] <models-file>"
-  echo ""
-  echo "Generate OpenAPI YAML spec from models file"
-  echo ""
-  echo "Options:"
-  echo "  -p    Generate Partial variants of entities"
-  echo "  -h    Show this help message"
-  echo ""
-  echo "Arguments:"
-  echo "  models-file    Path to the models file"
+printUsage() {
+  cat <<TXT
+Usage: $0 [-p] [-h] MODELS_FILE
+
+Generate OpenAPI YAML spec from models file.
+
+With -p, print a partial version of the entities, i.e. OpenAPI spec
+without any required fields. This is useful for putDoc/postDoc when
+you only want to set a limited number of fields and for getDocList
+when you only want to fetch a subset of the fields defined.
+
+Options:
+  -p    Generate Partial variants of entities
+  -h    Show this help message
+TXT
 }
 
 # Parse command line arguments
@@ -21,7 +25,7 @@ declare generatePartials=false
 declare modelsFile=""
 
 if (( $# == 0 )); then
-  show_usage
+  printUsage >&2
   exit 1
 fi
 
@@ -32,7 +36,7 @@ while (( $# > 0 )); do
       shift
       ;;
     -h)
-      show_usage
+      printUsage
       exit 0
       ;;
     *)
@@ -43,9 +47,14 @@ while (( $# > 0 )); do
 done
 
 if [[ -z "$modelsFile" ]]; then
-  echo "Error: models file is required"
-  echo ""
-  show_usage
+  echo -e "Error: models file is required\n" >&2
+  printUsage >&2
+  exit 1
+fi
+
+if ! [[ -f "$modelsFile" ]]; then
+  echo -e "Error: models file is not a regular file: $modelsFile\n" >&2
+  printUsage >&2
   exit 1
 fi
 
@@ -155,9 +164,7 @@ AWK
 echo
 awk -v entitySuffix='' -e "$awkScript" "$modelsFile"
 
-# Print OpenAPI spec without any required fields. This is useful for
-# putDoc/postDoc when you only want to set a limited number of fields and
-# for getDocList when you only want to fetch a subset of the fields defined.
+# Print OpenAPI spec without any required fields:
 if [[ "$generatePartials" == true ]]; then
   echo
   grep -vE '^ +Required .*' "$modelsFile" | awk -v entitySuffix="$partialEntitySuffix" -e "$awkScript"
