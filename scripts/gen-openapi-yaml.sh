@@ -3,9 +3,27 @@
 
 set -e
 
+show_usage() {
+  echo "Usage: $0 [-p] [-h] <models-file>"
+  echo ""
+  echo "Generate OpenAPI YAML spec from models file"
+  echo ""
+  echo "Options:"
+  echo "  -p    Generate Partial variants of entities"
+  echo "  -h    Show this help message"
+  echo ""
+  echo "Arguments:"
+  echo "  models-file    Path to the models file"
+}
+
 # Parse command line arguments
 declare generatePartials=false
 declare modelsFile=""
+
+if [[ $# -eq 0 ]]; then
+  show_usage
+  exit 1
+fi
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -13,12 +31,23 @@ while [[ $# -gt 0 ]]; do
       generatePartials=true
       shift
       ;;
+    -h)
+      show_usage
+      exit 0
+      ;;
     *)
       modelsFile="$1"
       shift
       ;;
   esac
 done
+
+if [[ -z "$modelsFile" ]]; then
+  echo "Error: models file is required"
+  echo ""
+  show_usage
+  exit 1
+fi
 
 declare -r partialEntitySuffix=Partial
 
