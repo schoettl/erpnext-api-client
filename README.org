@@ -323,6 +323,58 @@ In your Haskell code:
     docTypeName = "Customer"
 #+end_src
 
+*** Notes on =Maybe= and =Nullable=
+
+In the DocType definition model,
+
+- =Maybe= becomes =Nullable= meaning that the field value can be =null= (or
+  =Null= in Haskell).
+
+- Fields *not* listed after =Required= become =Maybe= meaning that the fields
+  are optional and =Nothing= will be left out in the JSON representation.
+
+Type level:
+
+: Project
+:   name Text
+:   project_name Text
+:   status Text
+:   project_type Text Maybe
+:   Required name project_name
+:
+: data Project = Project
+:   { projectName :: Text
+:   , projectProject_name :: Text
+:   , projectStatus :: Maybe Text
+:   , projectProject_type :: Maybe (Nullable Text)
+:   } deriving (Show, Eq)
+:
+: data ProjectPartial = ProjectPartial
+:   { projectPartialName :: Maybe Text
+:   , projectPartialProject_name :: Maybe Text
+:   , projectPartialStatus :: Maybe Text
+:   , projectPartialProject_type :: Maybe (Nullable Text)
+:   } deriving (Show, Eq)
+
+For each DocType, two types are generated, e.g. =Project= and
+=ProjectPartial=.
+The =*Partial= version has no required fields i.e. all fields are
+=Maybe= and are left out when assigned to =Nothing=.
+
+Value level:
+
+: Project                                             {
+:   { projectName = "PROJ-001"                          "name": "PROJ-001",
+:   , projectProject_name = "My Project"      =>        "project_name": "My Project",
+:   , projectStatus = Nothing
+:   , projectProject_type = Just Null                   "project_type": null
+:   }                                                 }
+
+
+: mkProjectPartial                                    {
+:   { projectProject_name = Just "My Project 2"   =>    "project_name": "My Project"
+:   }                                                 }
+
 ** Note on TLS problems
 
 If you're running ERPNext in your test environment, chances are that your
