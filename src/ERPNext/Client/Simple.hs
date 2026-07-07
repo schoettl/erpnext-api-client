@@ -14,6 +14,7 @@ module ERPNext.Client.Simple
   , postDoc
   , putDoc
   , getMethodCall
+  , postMethodCall
   , deleteDoc
   , mkSecret
   , mkConfig
@@ -259,6 +260,21 @@ deleteDoc manager config docTypeName docName = do
   response <- httpLbs request manager
   return $ parseDeleteResponse response
 
+-- | Helper function for method calls that handles the common logic.
+methodCall :: Manager
+           -> Config
+           -> Text -- ^ Method name
+           -> BS.ByteString -- ^ HTTP method (GET or POST)
+           -> [(Text, Maybe Text)] -- ^ Parameters
+           -> IO (ApiResponse Value)
+methodCall manager config methodName httpMethod args = do
+  let path = "/method/" <> urlEncode methodName
+  request <- createRequest config path httpMethod
+  let args' = map (\(x,y) -> (encodeUtf8 x, encodeUtf8 <$> y)) args
+  let requestWithArgs = setQueryString args' request
+  response <- httpLbs requestWithArgs manager
+  return $ parseMethodResponse response
+
 -- | Read-only remote method call using HTTP GET.
 getMethodCall
           :: Manager
@@ -266,10 +282,15 @@ getMethodCall
           -> Text -- ^ Method name, e.g. @frappe.auth.get_logged_user@.
           -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
           -> IO (ApiResponse Value)
-getMethodCall manager config methodName args = do
-  let path = "/method/" <> urlEncode methodName
-  request <- createRequest config path "GET"
-  let args' = map (\(x,y) -> (encodeUtf8 x, encodeUtf8 <$> y)) args
-  let requestWithArgs = setQueryString args' request
-  response <- httpLbs requestWithArgs manager
-  return $ parseMethodResponse response
+getMethodCall manager config methodName args =
+  methodCall manager config methodName "GET" args
+
+-- | Remote method call using HTTP POST that can modify state on ERPNext.
+postMethodCall
+          :: Manager
+          -> Config
+          -> Text -- ^ Method name, e.g. @frappe.client.submit_doc@.
+          -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
+          -> IO (ApiResponse Value)
+postMethodCall manager config methodName args =
+  methodCall manager config methodName "POST" args
