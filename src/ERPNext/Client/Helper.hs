@@ -19,7 +19,7 @@ import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Aeson (ToJSON)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Network.HTTP.Client
-import Network.HTTP.Types (Status(statusCode))
+import Network.HTTP.Types (notFound404, forbidden403)
 
 -- | Type for field names of DocTypes.
 type Fieldname = Text
@@ -70,8 +70,8 @@ tshow = pack . show
 
 -- | Test if response is HTTP 404 Not Found.
 isNotFound :: Response a -> Bool
-isNotFound = (==404) . statusCode . responseStatus
+isNotFound = (==notFound404) . responseStatus
 
 -- | Test if response is HTTP 403 Forbidden.
 isForbidden :: Response a -> Bool
-isForbidden = (==403) . statusCode . responseStatus
+isForbidden = (==forbidden403) . responseStatus
