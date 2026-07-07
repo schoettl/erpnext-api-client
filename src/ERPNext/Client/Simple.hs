@@ -73,7 +73,7 @@ instance FromJSON a => FromJSON (DataWrapper a) where
     dataValue <- obj .: "data"
     return (DataWrapper dataValue)
 
--- | Message wrapper type to parse JSON returned by ERPNext method calls.
+-- | Message wrapper type to parse JSON returned by ERPNext remote method calls.
 data MessageWrapper a = MessageWrapper { getMessage :: a }
   deriving Show
 
