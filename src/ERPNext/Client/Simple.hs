@@ -73,6 +73,15 @@ instance FromJSON a => FromJSON (DataWrapper a) where
     dataValue <- obj .: "data"
     return (DataWrapper dataValue)
 
+-- | Message wrapper type to parse JSON returned by ERPNext method calls.
+data MessageWrapper a = MessageWrapper { getMessage :: a }
+  deriving Show
+
+instance FromJSON a => FromJSON (MessageWrapper a) where
+  parseJSON = withObject "MessageWrapper" $ \obj -> do
+    messageValue <- obj .: "message"
+    return (MessageWrapper messageValue)
+
 -- | The API response.
 data ApiResponse a
   = Ok -- ^ The OK response.
@@ -171,6 +180,14 @@ parseDeleteResponse response =
       Error err -> Err response (Just (value, pack err))
     Nothing -> Err response Nothing
 
+parseMethodResponse :: forall a. FromJSON a => Response LBS.ByteString -> ApiResponse a
+parseMethodResponse response =
+  case decode @Value (responseBody response) of
+    Just value -> case fromJSON value :: Result (MessageWrapper a) of
+      Success result -> Ok response value (getMessage result)
+      Error err -> Err response (Just (value, pack err))
+    Nothing -> Err response Nothing
+
 -- | Get a list of documents for a given DocType name.
 --
 -- The passed query string is used as is. To properly encode it, use
@@ -255,4 +272,4 @@ getMethodCall manager config methodName args = do
   let args' = map (\(x,y) -> (encodeUtf8 x, encodeUtf8 <$> y)) args
   let requestWithArgs = setQueryString args' request
   response <- httpLbs requestWithArgs manager
-  return $ parseGetResponse response
+  return $ parseMethodResponse response
