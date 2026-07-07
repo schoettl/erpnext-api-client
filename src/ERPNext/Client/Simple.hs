@@ -261,13 +261,13 @@ deleteDoc manager config docTypeName docName = do
   return $ parseDeleteResponse response
 
 -- | Helper function for method calls that handles the common logic.
-methodCall :: Manager
+remoteMethodCall :: Manager
            -> Config
            -> Text -- ^ Method name
            -> BS.ByteString -- ^ HTTP method (GET or POST)
            -> [(Text, Maybe Text)] -- ^ Parameters
            -> IO (ApiResponse Value)
-methodCall manager config methodName httpMethod args = do
+remoteMethodCall manager config methodName httpMethod args = do
   let path = "/method/" <> urlEncode methodName
   request <- createRequest config path httpMethod
   let args' = map (\(x,y) -> (encodeUtf8 x, encodeUtf8 <$> y)) args
@@ -283,7 +283,7 @@ getMethodCall
           -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
           -> IO (ApiResponse Value)
 getMethodCall manager config methodName args =
-  methodCall manager config methodName "GET" args
+  remoteMethodCall manager config methodName "GET" args
 
 -- | Remote method call using HTTP POST that can modify state on ERPNext.
 postMethodCall
@@ -293,4 +293,4 @@ postMethodCall
           -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
           -> IO (ApiResponse Value)
 postMethodCall manager config methodName args =
-  methodCall manager config methodName "POST" args
+  remoteMethodCall manager config methodName "POST" args
