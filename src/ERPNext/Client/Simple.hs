@@ -13,6 +13,7 @@ module ERPNext.Client.Simple
   , getDoc
   , postDoc
   , putDoc
+  , getMethodCall
   , deleteDoc
   , mkSecret
   , mkConfig
@@ -24,10 +25,10 @@ module ERPNext.Client.Simple
   , Secret
   ) where
 
-import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..))
+import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..), setQueryString)
 import Network.HTTP.Types (hAuthorization, hContentType, Header, statusCode, statusMessage)
 import Data.ByteString.Char8 qualified as BS8
-import Data.Text hiding (show, length, concatMap, null)
+import Data.Text hiding (show, length, concatMap, null, map)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson (Value (..), FromJSON (..), Result (..), fromJSON, decode, encode, ToJSON, withObject, (.:))
 import Data.Aeson.KeyMap qualified as KeyMap
@@ -240,3 +241,18 @@ deleteDoc manager config docTypeName docName = do
   request <- createRequest config path "DELETE"
   response <- httpLbs request manager
   return $ parseDeleteResponse response
+
+-- | Read-only remote method call using HTTP GET.
+getMethodCall
+          :: Manager
+          -> Config
+          -> Text -- ^ Method name, e.g. @frappe.auth.get_logged_user@.
+          -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
+          -> IO (ApiResponse Value)
+getMethodCall manager config methodName args = do
+  let path = "/method/" <> urlEncode methodName
+  request <- createRequest config path "GET"
+  let args' = map (\(x,y) -> (encodeUtf8 x, encodeUtf8 <$> y)) args
+  let requestWithArgs = setQueryString args' request
+  response <- httpLbs requestWithArgs manager
+  return $ parseGetResponse response
