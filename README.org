@@ -211,6 +211,9 @@ Then, inside this repository directory you can run:
 #+end_src
 
 ** Remote Method Calls
+ERPNext's REST API also supports calling
+[[https://docs.frappe.io/framework/user/en/api/rest#remote-method-calls][remote
+methods]] directly.
 
 #+begin_src haskell
   getMethodCall  :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
@@ -220,6 +223,46 @@ Then, inside this repository directory you can run:
 - get for read-only, post for methods with db writes
 - on python exception: =exc=, =exc_type=
 - on success: =message= containing return value as JSON response
+
+#+begin_src haskell :tangle example3.hs
+  {-# LANGUAGE OverloadedStrings #-}
+  {-# LANGUAGE TypeApplications #-}
+
+  import ERPNext.Client
+  import System.Environment
+  import Data.Text (Text, pack, unpack)
+  import Network.HTTP.Client.TLS
+
+  main :: IO ()
+  main = do
+    url <- pack <$> getEnv "ERPNEXT_BASE_URL"
+    apiKey <- pack <$> getEnv "ERPNEXT_API_KEY"
+    apiSecret <- mkSecret . pack <$> getEnv "ERPNEXT_API_SECRET"
+
+    let cfg = mkConfig url apiKey apiSecret
+    mgr <- newTlsManager
+
+    -- Read-only remote method call:
+    userRes <- getMethodCall @Text mgr cfg "frappe.auth.get_logged_user" []
+    case userRes of
+      Ok _ _ user -> putStrLn $ "Logged in as: " ++ unpack user
+      err -> putStrLn $ "error: \n" ++ showJsonResponsePretty err
+
+    -- Remote method call that writes to the database:
+    tagRes <- postMethodCall @Text mgr cfg "frappe.desk.doctype.tag.tag.add_tag"
+                [ ("dt", Just "Issue")
+                , ("dn", Just "ISS-2026-00001")
+                , ("tag", Just "example tag")
+                ]
+    case tagRes of
+      Ok _ _ _ -> putStrLn "Tag added."
+      err -> putStrLn $ "error: \n" ++ showJsonResponsePretty err
+#+end_src
+
+#+begin_src sh
+  . .env
+  stack runhaskell --package http-client-tls example3.hs
+#+end_src
 
 questions:
 
