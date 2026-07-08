@@ -213,8 +213,8 @@ Then, inside this repository directory you can run:
 ** Remote Method Calls
 
 #+begin_src haskell
-  getCallMethod  :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
-  postCallMethod :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
+  getMethodCall  :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
+  postMethodCall :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
 #+end_src
 
 - get for read-only, post for methods with db writes
