@@ -13,6 +13,8 @@ module ERPNext.Client.Simple
   , getDoc
   , postDoc
   , putDoc
+  , getMethodCall
+  , postMethodCall
   , deleteDoc
   , mkSecret
   , mkConfig
@@ -24,10 +26,10 @@ module ERPNext.Client.Simple
   , Secret
   ) where
 
-import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..))
+import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..), setQueryString)
 import Network.HTTP.Types (hAuthorization, hContentType, Header, statusCode, statusMessage)
 import Data.ByteString.Char8 qualified as BS8
-import Data.Text hiding (show, length, concatMap, null)
+import Data.Text hiding (show, length, concatMap, null, map)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Aeson (Value (..), FromJSON (..), Result (..), fromJSON, decode, encode, ToJSON, withObject, (.:))
 import Data.Aeson.KeyMap qualified as KeyMap
@@ -71,6 +73,15 @@ instance FromJSON a => FromJSON (DataWrapper a) where
   parseJSON = withObject "DataWrapper" $ \obj -> do
     dataValue <- obj .: "data"
     return (DataWrapper dataValue)
+
+-- | Message wrapper type to parse JSON returned by ERPNext remote method calls.
+data MessageWrapper a = MessageWrapper { getMessage :: a }
+  deriving Show
+
+instance FromJSON a => FromJSON (MessageWrapper a) where
+  parseJSON = withObject "MessageWrapper" $ \obj -> do
+    messageValue <- obj .: "message"
+    return (MessageWrapper messageValue)
 
 -- | The API response.
 data ApiResponse a
@@ -170,6 +181,14 @@ parseDeleteResponse response =
       Error err -> Err response (Just (value, pack err))
     Nothing -> Err response Nothing
 
+parseMethodResponse :: forall a. FromJSON a => Response LBS.ByteString -> ApiResponse a
+parseMethodResponse response =
+  case decode @Value (responseBody response) of
+    Just value -> case fromJSON value :: Result (MessageWrapper a) of
+      Success result -> Ok response value (getMessage result)
+      Error err -> Err response (Just (value, pack err))
+    Nothing -> Err response Nothing
+
 -- | Get a list of documents for a given DocType name.
 --
 -- The passed query string is used as is. To properly encode it, use
@@ -240,3 +259,38 @@ deleteDoc manager config docTypeName docName = do
   request <- createRequest config path "DELETE"
   response <- httpLbs request manager
   return $ parseDeleteResponse response
+
+-- | Helper function for method calls that handles the common logic.
+remoteMethodCall :: Manager
+           -> Config
+           -> Text -- ^ Method name
+           -> BS.ByteString -- ^ HTTP method (GET or POST)
+           -> [(Text, Maybe Text)] -- ^ Parameters
+           -> IO (ApiResponse Value)
+remoteMethodCall manager config methodName httpMethod args = do
+  let path = "/method/" <> urlEncode methodName
+  request <- createRequest config path httpMethod
+  let args' = map (\(x,y) -> (encodeUtf8 x, encodeUtf8 <$> y)) args
+  let requestWithArgs = setQueryString args' request
+  response <- httpLbs requestWithArgs manager
+  return $ parseMethodResponse response
+
+-- | Read-only remote method call using HTTP GET.
+getMethodCall
+          :: Manager
+          -> Config
+          -> Text -- ^ Method name, e.g. @frappe.auth.get_logged_user@.
+          -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
+          -> IO (ApiResponse Value)
+getMethodCall manager config methodName args =
+  remoteMethodCall manager config methodName "GET" args
+
+-- | Remote method call using HTTP POST that can modify state on ERPNext.
+postMethodCall
+          :: Manager
+          -> Config
+          -> Text -- ^ Method name, e.g. @frappe.client.submit_doc@.
+          -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
+          -> IO (ApiResponse Value)
+postMethodCall manager config methodName args =
+  remoteMethodCall manager config methodName "POST" args

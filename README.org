@@ -210,10 +210,83 @@ Then, inside this repository directory you can run:
   stack runhaskell --package http-client-tls example2.hs
 #+end_src
 
+** Remote Method Calls
+ERPNext's REST API also supports calling
+[[https://docs.frappe.io/framework/user/en/api/rest#remote-method-calls][remote
+methods]] directly.
+
+#+begin_src haskell
+  getMethodCall  :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
+  postMethodCall :: Manager -> Config -> MethodName -> Args -> IO (ApiResponse a)
+#+end_src
+
+- get for read-only, post for methods with db writes
+- on python exception: =exc=, =exc_type=
+- on success: =message= containing return value as JSON response
+
+#+begin_src haskell :tangle example3.hs
+  {-# LANGUAGE OverloadedStrings #-}
+  {-# LANGUAGE TypeApplications #-}
+
+  import ERPNext.Client
+  import System.Environment
+  import Data.Text (Text, pack, unpack)
+  import Network.HTTP.Client.TLS
+
+  main :: IO ()
+  main = do
+    url <- pack <$> getEnv "ERPNEXT_BASE_URL"
+    apiKey <- pack <$> getEnv "ERPNEXT_API_KEY"
+    apiSecret <- mkSecret . pack <$> getEnv "ERPNEXT_API_SECRET"
+
+    let cfg = mkConfig url apiKey apiSecret
+    mgr <- newTlsManager
+
+    -- Read-only remote method call:
+    userRes <- getMethodCall @Text mgr cfg "frappe.auth.get_logged_user" []
+    case userRes of
+      Ok _ _ user -> putStrLn $ "Logged in as: " ++ unpack user
+      err -> putStrLn $ "error: \n" ++ showJsonResponsePretty err
+
+    -- Remote method call that writes to the database:
+    tagRes <- postMethodCall @Text mgr cfg "frappe.desk.doctype.tag.tag.add_tag"
+                [ ("dt", Just "Issue")
+                , ("dn", Just "ISS-2026-00001")
+                , ("tag", Just "example tag")
+                ]
+    case tagRes of
+      Ok _ _ _ -> putStrLn "Tag added."
+      err -> putStrLn $ "error: \n" ++ showJsonResponsePretty err
+#+end_src
+
+#+begin_src sh
+  . .env
+  stack runhaskell --package http-client-tls example3.hs
+#+end_src
+
+questions:
+
+1. reuse ApiResponse type? it currently doesn't handle exceptions
+   explicitly but it might be useful.
+2. how to pass args to method calls?
+3. how to pass the method name? =IsMethodCall[Result]= class? or explicitly?
+4. how to handle possible return value variants?
+   like ~data CallRes1 = Found Int | NotFound String~.
+   could be done by just 1 variant (and the models approach) with
+   null-able fields.
+
+proposals:
+
+1. pass method name explicitly
+2. reuse =ApiResponse= (no explicit handling of exceptions because
+   most exceptions are probably triggered by invalid params)
+3. no =IsMethodCall= class because there might often be primitive
+   return types like a number or a string. wrapping these with newtype
+   only to implement instances for them is too much.
+
 ** Scope and Limits
 
 - Only [[https://docs.frappe.io/framework/user/en/api/rest#1-token-based-authentication][token-based authentication]] is supported.
-- [[https://docs.frappe.io/framework/user/en/api/rest#remote-method-calls][Remote Method Calls]] are not yet supported.
 - [[https://docs.frappe.io/framework/user/en/api/rest#file-uploads][File Uploads]] are not yet supported.
 
 ** Data records for DocTypes
@@ -322,6 +395,58 @@ In your Haskell code:
   instance IsDocType Customer where
     docTypeName = "Customer"
 #+end_src
+
+*** Notes on =Maybe= and =Nullable=
+
+In the DocType definition model,
+
+- =Maybe= becomes =Nullable= meaning that the field value can be =null= (or
+  =Null= in Haskell).
+
+- Fields *not* listed after =Required= become =Maybe= meaning that the fields
+  are optional and =Nothing= will be left out in the JSON representation.
+
+Type level:
+
+: Project
+:   name Text
+:   project_name Text
+:   status Text
+:   project_type Text Maybe
+:   Required name project_name
+:
+: data Project = Project
+:   { projectName :: Text
+:   , projectProject_name :: Text
+:   , projectStatus :: Maybe Text
+:   , projectProject_type :: Maybe (Nullable Text)
+:   } deriving (Show, Eq)
+:
+: data ProjectPartial = ProjectPartial
+:   { projectPartialName :: Maybe Text
+:   , projectPartialProject_name :: Maybe Text
+:   , projectPartialStatus :: Maybe Text
+:   , projectPartialProject_type :: Maybe (Nullable Text)
+:   } deriving (Show, Eq)
+
+For each DocType, two types are generated, e.g. =Project= and
+=ProjectPartial=.
+The =*Partial= version has no required fields i.e. all fields are
+=Maybe= and are left out when assigned to =Nothing=.
+
+Value level:
+
+: Project                                             {
+:   { projectName = "PROJ-001"                          "name": "PROJ-001",
+:   , projectProject_name = "My Project"      =>        "project_name": "My Project",
+:   , projectStatus = Nothing
+:   , projectProject_type = Just Null                   "project_type": null
+:   }                                                 }
+
+
+: mkProjectPartial                                    {
+:   { projectProject_name = Just "My Project 2"   =>    "project_name": "My Project"
+:   }                                                 }
 
 ** Note on TLS problems
 
