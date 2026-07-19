@@ -26,7 +26,7 @@ module ERPNext.Client.Simple
   , Secret
   ) where
 
-import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..), setQueryString)
+import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..), setQueryString, getOriginalRequest, method, path, queryString)
 import Network.HTTP.Types (hAuthorization, hContentType, Header, statusCode, statusMessage)
 import Data.ByteString.Char8 qualified as BS8
 import Data.Text hiding (show, length, concatMap, null, map)
@@ -109,12 +109,16 @@ showJsonResponsePretty (Err _ Nothing) = "{}"
 
 showApiResponseDebug :: ApiResponse a -> String
 showApiResponseDebug response =
-  "HTTP " ++ show (statusCode status) ++ " "
+  "Request: " ++ show (method originalRequest) ++ " " ++ requestPath ++ "\n"
+   ++ "HTTP " ++ show (statusCode status) ++ " "
    ++ BS8.unpack (statusMessage status)
    ++ "\n\n"
    ++ body
   where
-    status = responseStatus $ getResponse response
+    httpResponse = getResponse response
+    originalRequest = getOriginalRequest httpResponse
+    status = responseStatus httpResponse
+    requestPath = BS8.unpack (path originalRequest) ++ BS8.unpack (queryString originalRequest)
     body = case response of
       (Ok _ val _) -> showJsonPretty val
       (Err _ (Just (val, _))) ->
