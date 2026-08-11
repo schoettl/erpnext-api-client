@@ -21,12 +21,14 @@ module ERPNext.Client.Simple
   , getResponse
   , showJsonResponsePretty
   , showApiResponseDebug
+  , uploadFile
   , ApiResponse (..)
   , Config
   , Secret
   ) where
 
 import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..), setQueryString)
+import Network.HTTP.Client.MultipartFormData (formDataBody, partFileRequestBody, partBS)
 import Network.HTTP.Types (hAuthorization, hContentType, Header, statusCode, statusMessage)
 import Data.ByteString.Char8 qualified as BS8
 import Data.Text hiding (show, length, concatMap, null, map)
@@ -294,3 +296,26 @@ postMethodCall
           -> IO (ApiResponse Value)
 postMethodCall manager config methodName args =
   remoteMethodCall manager config methodName "POST" args
+
+uploadFile
+-- | Uploads a file and attaches it to an existing document.
+  :: Manager
+  -> Config
+  -> Text          -- ^ DoctType
+  -> Text          -- ^ DocName
+  -> Text          -- ^ Fieldname to set, e.g. "image"
+  -> Text          -- ^ File name, e.g. "img.jpg"
+  -> LBS.ByteString -- ^ Raw file contents
+  -> IO (ApiResponse Value)
+uploadFile manager config doctype docname fieldname fileName fileContents = do
+  request <- createRequest config "/method/upload_file" "POST"
+  requestWithBody <- formDataBody
+    [ partFileRequestBody "file" (unpack fileName) (RequestBodyLBS fileContents)
+    , partBS "is_private" "1"
+    , partBS "doctype" (encodeUtf8 doctype)
+    , partBS "docname" (encodeUtf8 docname)
+    , partBS "fieldname" (encodeUtf8 fieldname)
+    ]
+    request
+  response <- httpLbs requestWithBody manager
+  return $ parseMethodResponse response
