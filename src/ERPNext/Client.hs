@@ -37,12 +37,14 @@ module ERPNext.Client
   , systemFieldnames
   , showJsonResponsePretty
   , showApiResponseDebug
+  , uploadFile
   ) where
 
 import Network.HTTP.Client (Manager)
 import Data.Text hiding (map, filter, null)
 import Data.Aeson
 import Data.Aeson.Types (parseEither)
+import Data.ByteString.Lazy qualified as LBS
 import ERPNext.Client.Filter (Fieldname)
 import ERPNext.Client.QueryStringParam
 import ERPNext.Client.Simple qualified as Simple
@@ -221,6 +223,20 @@ andThen
   -> (a -> IO (ApiResponse b))
   -> IO (ApiResponse a, Maybe (ApiResponse b))
 andThen = andThenWith id
+
+-- | Uploads a file and attaches it to an existing document.
+uploadFile :: forall a. FromJSON a
+           => Manager
+           -> Config
+           -> Text -- ^ DoctType
+           -> Text -- ^ DocName
+           -> Text -- ^ Fieldname to set, e.g. "image"
+           -> Text -- ^ File name, e.g. "img.jpg"
+           -> LBS.ByteString -- ^ Raw file contents
+           -> IO (ApiResponse a)
+uploadFile manager config doctype docname fieldname fileName fileContents = do
+  response <- Simple.uploadFile manager config doctype docname fieldname fileName fileContents
+  return $ parseTypedResponse response
 
 -- | Get all fieldnames for a given DocType. These won't include the
 -- fields from 'systemFieldnames'.
