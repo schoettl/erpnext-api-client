@@ -2,7 +2,6 @@
 module ERPNext.Client.Types
   ( DocStatus (..)
   , EBool (..)
-  , UploadedFile (..)
   , toDocStatus
   , fromDocStatus
   , toBool
@@ -10,9 +9,7 @@ module ERPNext.Client.Types
   ) where
 
 import Data.Aeson
-import Data.Text (Text)
 import Data.Scientific (toBoundedInteger)
-import GHC.Generics (Generic)
 
 -- | ERPNext Bool type for use in your DocType record definition.
 --
@@ -43,15 +40,6 @@ instance FromJSON DocStatus where
       Just i -> return $ toDocStatus i
       Nothing -> fail $ "expected integer but got non-integer number: " ++ show n
   parseJSON v = fail $ "expected Number but got " ++ show v
-
-data UploadedFile = UploadedFile
-  { name       :: Text
-  , file_url   :: Text
-  , file_name  :: Text
-  , is_private :: Int
-  } deriving (Show, Generic)
-
-instance FromJSON UploadedFile
 
 fromDocStatus :: DocStatus -> Int
 fromDocStatus status = case status of
