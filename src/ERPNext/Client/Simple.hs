@@ -297,8 +297,8 @@ postMethodCall
 postMethodCall manager config methodName args =
   remoteMethodCall manager config methodName "POST" args
 
+ -- | Uploads a file and attaches it to an existing document.
 uploadFile
--- | Uploads a file and attaches it to an existing document.
   :: Manager
   -> Config
   -> Text          -- ^ DoctType
