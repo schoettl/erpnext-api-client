@@ -229,12 +229,11 @@ uploadFile :: forall a. (IsDocType a, FromJSON a)
            => Manager
            -> Config
            -> Text -- ^ DocName
-           -> Text -- ^ Fieldname to set, e.g. "image"
            -> Text -- ^ File name, e.g. "img.jpg"
            -> LBS.ByteString -- ^ Raw file contents
            -> IO (ApiResponse a)
-uploadFile manager config name fieldname fileName fileContents = do
-  response <- Simple.uploadFile manager config (docTypeName @a) name fieldname fileName fileContents
+uploadFile manager config name fileName fileContents = do
+  response <- Simple.uploadFile manager config (docTypeName @a) name fileName fileContents
   return $ parseTypedResponse response
 
 -- | Get all fieldnames for a given DocType. These won't include the

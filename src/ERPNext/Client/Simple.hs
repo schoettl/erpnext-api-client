@@ -303,18 +303,16 @@ uploadFile
   -> Config
   -> Text          -- ^ DoctType
   -> Text          -- ^ DocName
-  -> Text          -- ^ Fieldname to set, e.g. "image"
   -> Text          -- ^ File name, e.g. "img.jpg"
   -> LBS.ByteString -- ^ Raw file contents
   -> IO (ApiResponse Value)
-uploadFile manager config doctype docname fieldname fileName fileContents = do
+uploadFile manager config doctype docname fileName fileContents = do
   request <- createRequest config "/method/upload_file" "POST"
   requestWithBody <- formDataBody
     [ partFileRequestBody "file" (unpack fileName) (RequestBodyLBS fileContents)
     , partBS "is_private" "1"
     , partBS "doctype" (encodeUtf8 doctype)
     , partBS "docname" (encodeUtf8 docname)
-    , partBS "fieldname" (encodeUtf8 fieldname)
     ]
     request
   response <- httpLbs requestWithBody manager
