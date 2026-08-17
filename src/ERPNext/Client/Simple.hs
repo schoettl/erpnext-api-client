@@ -22,7 +22,9 @@ module ERPNext.Client.Simple
   , showJsonResponsePretty
   , showApiResponseDebug
   , uploadFile
+  , defaultFileUploadParams
   , ApiResponse (..)
+  , FileUploadParams
   , Config
   , Secret
   ) where
@@ -101,6 +103,19 @@ data ApiResponse a
 instance Functor ApiResponse where
   fmap f (Ok response val x) = Ok response val (f x)
   fmap _ (Err response err)  = Err response err
+
+-- | Parameters for uploading a file via 'uploadFile'.
+data FileUploadParams = FileUploadParams
+  { fileUploadDocName :: Maybe Text   -- ^ DocName to attach file to e.g. Just "ITEM-0001"
+  , fileUploadIsPrivate :: Bool       -- ^ Whether to upload file as private
+  }
+
+
+defaultFileUploadParams :: FileUploadParams
+defaultFileUploadParams = FileUploadParams
+  { fileUploadDocName = Nothing
+  , fileUploadIsPrivate = True
+  }
 
 -- | Pretty-print JSON API response or print HTTP status and message
 -- if response is no valid JSON.
@@ -301,19 +316,18 @@ postMethodCall manager config methodName args =
 uploadFile
   :: Manager
   -> Config
-  -> Text          -- ^ DoctType
-  -> Text          -- ^ DocName
-  -> Text          -- ^ File name, e.g. "img.jpg"
-  -> LBS.ByteString -- ^ Raw file contents
+  -> Text             -- ^ File name, e.g. "img.jpg"
+  -> LBS.ByteString   -- ^ Raw file contents
+  -> FileUploadParams -- ^ Optional request params
   -> IO (ApiResponse Value)
-uploadFile manager config doctype docname fileName fileContents = do
+uploadFile manager config  fileName fileContents args = do
   request <- createRequest config "/method/upload_file" "POST"
   requestWithBody <- formDataBody
-    [ partFileRequestBody "file" (unpack fileName) (RequestBodyLBS fileContents)
-    , partBS "is_private" "1"
-    , partBS "doctype" (encodeUtf8 doctype)
-    , partBS "docname" (encodeUtf8 docname)
-    ]
+    ( [ partFileRequestBody "file" (unpack fileName) (RequestBodyLBS fileContents)
+      , partBS "is_private" (if fileUploadIsPrivate args then "1" else "0")
+      ]
+      ++ maybe [] (\docname -> [partBS "docname" (encodeUtf8 docname)]) (fileUploadDocName args)
+    )
     request
   response <- httpLbs requestWithBody manager
   return $ parseMethodResponse response
