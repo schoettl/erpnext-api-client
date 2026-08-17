@@ -107,7 +107,7 @@ instance Functor ApiResponse where
 -- | Parameters for uploading a file via 'uploadFile'.
 data FileUploadParams = FileUploadParams
   { fileUploadDocType :: Maybe Text   -- ^ DocType to attach the file to e.g Just "Item"
-  , fileUploadDocName :: Maybe Text   -- ^ DocName to attach file to e.g. Just "ITEM-0001"
+  , fileUploadDocName :: Maybe Text   -- ^ Document name to attach file to e.g. Just "ITEM-0001"
   , fileUploadIsPrivate :: Bool       -- ^ Whether to upload file as private
   }
 
