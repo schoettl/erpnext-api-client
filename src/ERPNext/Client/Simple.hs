@@ -21,12 +21,16 @@ module ERPNext.Client.Simple
   , getResponse
   , showJsonResponsePretty
   , showApiResponseDebug
+  , uploadFile
+  , defaultFileUploadParams
   , ApiResponse (..)
+  , FileUploadParams (..)
   , Config
   , Secret
   ) where
 
 import Network.HTTP.Client (Manager, httpLbs, Response (..), Request (..), parseRequest, RequestBody (..), setQueryString)
+import Network.HTTP.Client.MultipartFormData (formDataBody, partFileRequestBody, partBS)
 import Network.HTTP.Types (hAuthorization, hContentType, Header, statusCode, statusMessage)
 import Data.ByteString.Char8 qualified as BS8
 import Data.Text hiding (show, length, concatMap, null, map)
@@ -99,6 +103,21 @@ data ApiResponse a
 instance Functor ApiResponse where
   fmap f (Ok response val x) = Ok response val (f x)
   fmap _ (Err response err)  = Err response err
+
+-- | Parameters for uploading a file via 'uploadFile'.
+data FileUploadParams = FileUploadParams
+  { fileUploadDocType :: Maybe Text   -- ^ DocType to attach the file to e.g Just "Item"
+  , fileUploadDocName :: Maybe Text   -- ^ Document name to attach file to e.g. Just "ITEM-0001"
+  , fileUploadIsPrivate :: Bool       -- ^ Whether to upload file as private
+  }
+
+
+defaultFileUploadParams :: FileUploadParams
+defaultFileUploadParams = FileUploadParams
+  { fileUploadDocType = Nothing
+  , fileUploadDocName = Nothing
+  , fileUploadIsPrivate = True
+  }
 
 -- | Pretty-print JSON API response or print HTTP status and message
 -- if response is no valid JSON.
@@ -294,3 +313,24 @@ postMethodCall
           -> IO (ApiResponse Value)
 postMethodCall manager config methodName args =
   remoteMethodCall manager config methodName "POST" args
+
+ -- | Uploads a file and attaches it to an existing document.
+uploadFile
+  :: Manager
+  -> Config
+  -> Text             -- ^ File name, e.g. "img.jpg"
+  -> LBS.ByteString   -- ^ Raw file contents
+  -> FileUploadParams -- ^ Optional request params
+  -> IO (ApiResponse Value)
+uploadFile manager config  fileName fileContents args = do
+  request <- createRequest config "/method/upload_file" "POST"
+  requestWithBody <- formDataBody
+    ( [ partFileRequestBody "file" (unpack fileName) (RequestBodyLBS fileContents)
+      , partBS "is_private" (if fileUploadIsPrivate args then "1" else "0")
+      ]
+      ++ maybe [] (\(doctype, docname) -> [partBS "doctype" (encodeUtf8 doctype), partBS "docname" (encodeUtf8 docname)])
+          ((,) <$> fileUploadDocType args <*> fileUploadDocName args)
+    )
+    request
+  response <- httpLbs requestWithBody manager
+  return $ parseMethodResponse response
