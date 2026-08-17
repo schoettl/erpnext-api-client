@@ -24,7 +24,7 @@ module ERPNext.Client.Simple
   , uploadFile
   , defaultFileUploadParams
   , ApiResponse (..)
-  , FileUploadParams
+  , FileUploadParams (..)
   , Config
   , Secret
   ) where
