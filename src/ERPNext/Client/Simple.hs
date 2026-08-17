@@ -106,14 +106,16 @@ instance Functor ApiResponse where
 
 -- | Parameters for uploading a file via 'uploadFile'.
 data FileUploadParams = FileUploadParams
-  { fileUploadDocName :: Maybe Text   -- ^ DocName to attach file to e.g. Just "ITEM-0001"
+  { fileUploadDocType :: Maybe Text   -- ^ DocType to attach the file to e.g Just "Item"
+  , fileUploadDocName :: Maybe Text   -- ^ DocName to attach file to e.g. Just "ITEM-0001"
   , fileUploadIsPrivate :: Bool       -- ^ Whether to upload file as private
   }
 
 
 defaultFileUploadParams :: FileUploadParams
 defaultFileUploadParams = FileUploadParams
-  { fileUploadDocName = Nothing
+  { fileUploadDocType = Nothing
+  , fileUploadDocName = Nothing
   , fileUploadIsPrivate = True
   }
 
@@ -326,7 +328,8 @@ uploadFile manager config  fileName fileContents args = do
     ( [ partFileRequestBody "file" (unpack fileName) (RequestBodyLBS fileContents)
       , partBS "is_private" (if fileUploadIsPrivate args then "1" else "0")
       ]
-      ++ maybe [] (\docname -> [partBS "docname" (encodeUtf8 docname)]) (fileUploadDocName args)
+      ++ maybe [] (\(doctype, docname) -> [partBS "doctype" (encodeUtf8 doctype), partBS "docname" (encodeUtf8 docname)])
+          ((,) <$> fileUploadDocType args <*> fileUploadDocName args)
     )
     request
   response <- httpLbs requestWithBody manager
