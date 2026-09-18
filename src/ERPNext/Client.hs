@@ -19,6 +19,8 @@ module ERPNext.Client
   , postDoc
   , putDoc
   , deleteDoc
+  , getMethodCall
+  , postMethodCall
   , mkSecret
   , mkConfig
   , IsDocType (..)
@@ -26,6 +28,7 @@ module ERPNext.Client
   , Secret
   , QueryStringParam (..)
   , ApiResponse (..)
+  , ApiError (..) -- to be used with ExceptT
   , Fieldname
   , getResponse
   , andThen
@@ -35,6 +38,7 @@ module ERPNext.Client
   , systemFieldnames
   , showJsonResponsePretty
   , showApiResponseDebug
+  , showApiErrorDebug
   ) where
 
 import Network.HTTP.Client (Manager)
@@ -44,7 +48,7 @@ import Data.Aeson.Types (parseEither)
 import ERPNext.Client.Filter (Fieldname)
 import ERPNext.Client.QueryStringParam
 import ERPNext.Client.Simple qualified as Simple
-import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig, showJsonResponsePretty, showApiResponseDebug, getResponse)
+import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig, showJsonResponsePretty, showApiResponseDebug, getResponse, showApiErrorDebug, ApiError (..))
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name but there can still be multiple
@@ -135,6 +139,28 @@ putDoc :: forall a. (IsDocType a, FromJSON a, ToJSON a)
            => Manager -> Config -> Text -> a -> IO (ApiResponse a)
 putDoc manager config name doc = do
   response <- Simple.putDoc manager config (docTypeName @a) name (toJSON doc)
+  return $ parseTypedResponse response
+
+-- | Read-only remote method call using HTTP GET with typed result.
+getMethodCall :: forall a. FromJSON a
+              => Manager
+              -> Config
+              -> Text -- ^ Method name, e.g. @frappe.auth.get_logged_user@.
+              -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
+              -> IO (ApiResponse a)
+getMethodCall manager config methodName args = do
+  response <- Simple.getMethodCall manager config methodName args
+  return $ parseTypedResponse response
+
+-- | Remote method call using HTTP POST that can modify state on ERPNext with typed result.
+postMethodCall :: forall a. FromJSON a
+               => Manager
+               -> Config
+               -> Text -- ^ Method name, e.g. @frappe.client.submit_doc@.
+               -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
+               -> IO (ApiResponse a)
+postMethodCall manager config methodName args = do
+  response <- Simple.postMethodCall manager config methodName args
   return $ parseTypedResponse response
 
 -- Helper function to convert ApiResponse Value to ApiResponse a

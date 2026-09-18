@@ -3,8 +3,62 @@
 
 set -e
 
-# models file like persistent's config/models file format
-declare modelsFile=$1
+printUsage() {
+  cat <<TXT
+Usage: $0 [-p] [-h] MODELS_FILE
+
+Generate OpenAPI YAML spec from models file.
+
+With -p, print a partial version of the entities, i.e. OpenAPI spec
+without any required fields. This is useful for putDoc/postDoc when
+you only want to set a limited number of fields and for getDocList
+when you only want to fetch a subset of the fields defined.
+
+Options:
+  -p    Generate Partial variants of entities
+  -h    Show this help message
+TXT
+}
+
+# Parse command line arguments
+declare generatePartials=false
+declare modelsFile=""
+
+if (( $# == 0 )); then
+  printUsage >&2
+  exit 1
+fi
+
+while (( $# > 0 )); do
+  case $1 in
+    -p)
+      generatePartials=true
+      shift
+      ;;
+    -h)
+      printUsage
+      exit 0
+      ;;
+    *)
+      modelsFile="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$modelsFile" ]]; then
+  echo -e "Error: models file is required\n" >&2
+  printUsage >&2
+  exit 1
+fi
+
+if ! [[ -f "$modelsFile" ]]; then
+  echo -e "Error: models file is not a regular file: $modelsFile\n" >&2
+  printUsage >&2
+  exit 1
+fi
+
+declare -r partialEntitySuffix=Partial
 
 cat <<YAML
 openapi: 3.0.0
@@ -26,21 +80,32 @@ paths:
                 properties:
 YAML
 
-awk -f- <<'AWK' "$modelsFile"
+if [[ "$generatePartials" == true ]]; then
+  awk -v partialEntitySuffix="$partialEntitySuffix" -f- <<'AWK' "$modelsFile"
+/^[A-Z]/ {
+  print "                  " $1 ":"
+  print "                    $ref: '#/components/schemas/" $1 "'"
+  print "                  " $1 partialEntitySuffix ":"
+  print "                    $ref: '#/components/schemas/" $1 partialEntitySuffix"'"
+}
+AWK
+else
+  awk -f- <<'AWK' "$modelsFile"
 /^[A-Z]/ {
   print "                  " $1 ":"
   print "                    $ref: '#/components/schemas/" $1 "'"
 }
 AWK
+fi
 
 cat <<YAML
 components:
   schemas:
 YAML
 
-awk -f- <<'AWK' "$modelsFile"
+declare awkScript=$(cat <<'AWK'
 /^[A-Z]/ {
-  entity = $1
+  entity = $1 entitySuffix
   print "    " entity ":"
   print "      title: " entity
   print "      description: " entity
@@ -94,3 +159,14 @@ awk -f- <<'AWK' "$modelsFile"
   }
 }
 AWK
+)
+
+# Print OpenAPI spec as originally defined:
+echo
+awk -v entitySuffix='' -e "$awkScript" "$modelsFile"
+
+# Print OpenAPI spec without any required fields:
+if [[ "$generatePartials" == true ]]; then
+  echo
+  grep -vE '^ +Required .*' "$modelsFile" | awk -v entitySuffix="$partialEntitySuffix" -e "$awkScript"
+fi
