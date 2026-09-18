@@ -135,6 +135,12 @@ postDoc manager config doc = do
   return $ parseTypedResponse response
 
 -- | Update a document of a given DocType by name.
+--
+-- Warning: If the @doc@ contains a @name@ field which ends up in the
+-- JSON request body, then ERPNext's behavior is unclear. E.g., @name = null@
+-- will create a new document instead of updating the document
+-- specified by the @name@ function argument!
+-- TODO: investigate edge cases, e.g. doc name mismatch, doc name empty string, doc name set
 putDoc :: forall a. (IsDocType a, FromJSON a, ToJSON a)
            => Manager -> Config -> Text -> a -> IO (ApiResponse a)
 putDoc manager config name doc = do

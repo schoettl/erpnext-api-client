@@ -254,7 +254,12 @@ postDoc manager config docTypeName docData = do
   response <- httpLbs request manager
   return $ parseGetResponse response
 
--- | Update an existing document.
+-- | Update a document of a given DocType by name.
+--
+-- Warning: If the @docData@ contains a @name@ field which ends up in the
+-- JSON request body, then ERPNext's behavior is unclear. E.g., @name = null@
+-- will create a new document instead of updating the document
+-- specified by the @docName@ function argument!
 putDoc :: Manager
        -> Config
        -> Text -- ^ DocType name
