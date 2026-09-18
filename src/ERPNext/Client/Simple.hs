@@ -21,7 +21,9 @@ module ERPNext.Client.Simple
   , getResponse
   , showJsonResponsePretty
   , showApiResponseDebug
+  , showApiErrorDebug
   , ApiResponse (..)
+  , ApiError (..) -- to be used with ExceptT
   , Config
   , Secret
   ) where
@@ -298,3 +300,10 @@ postMethodCall
           -> IO (ApiResponse Value)
 postMethodCall manager config methodName args =
   remoteMethodCall manager config methodName "POST" args
+
+showApiErrorDebug :: ApiError -> String
+showApiErrorDebug (ApiError resp err) =
+  showApiResponseDebug (Err resp err)
+
+data ApiError = ApiError (Response LBS.ByteString) (Maybe (Value, Text))
+  deriving Show

@@ -28,6 +28,7 @@ module ERPNext.Client
   , Secret
   , QueryStringParam (..)
   , ApiResponse (..)
+  , ApiError (..) -- to be used with ExceptT
   , Fieldname
   , getResponse
   , andThen
@@ -37,6 +38,7 @@ module ERPNext.Client
   , systemFieldnames
   , showJsonResponsePretty
   , showApiResponseDebug
+  , showApiErrorDebug
   ) where
 
 import Network.HTTP.Client (Manager)
@@ -46,7 +48,7 @@ import Data.Aeson.Types (parseEither)
 import ERPNext.Client.Filter (Fieldname)
 import ERPNext.Client.QueryStringParam
 import ERPNext.Client.Simple qualified as Simple
-import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig, showJsonResponsePretty, showApiResponseDebug, getResponse)
+import ERPNext.Client.Simple (ApiResponse (..), Config, Secret, mkSecret, mkConfig, showJsonResponsePretty, showApiResponseDebug, getResponse, showApiErrorDebug, ApiError (..))
 
 -- | Type class for types which represent an ERPNext DocType.
 -- Each DocType has a unique name but there can still be multiple
