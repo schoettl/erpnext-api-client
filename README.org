@@ -331,16 +331,20 @@ In the DocType definition model,
   =Null= in Haskell).
 
 - Fields *not* listed after =Required= become =Maybe= meaning that the fields
-  are optional and =Nothing= will be left out in the JSON representation.
+  are optional. =Nothing= will be left out in the JSON representation.
 
 Type level:
 
+: -- DocType definition model:
+:
 : Project
 :   name Text
 :   project_name Text
 :   status Text
 :   project_type Text Maybe
 :   Required name project_name
+:
+: -- Generated Haskell record types:
 :
 : data Project = Project
 :   { projectName :: Text
