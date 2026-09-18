@@ -106,17 +106,17 @@ instance Functor ApiResponse where
 
 -- | Parameters for uploading a file via 'uploadFile'.
 data FileUploadParams = FileUploadParams
-  { fileUploadDocType :: Maybe Text   -- ^ DocType to attach the file to e.g Just "Item"
-  , fileUploadDocName :: Maybe Text   -- ^ Document name to attach file to e.g. Just "ITEM-0001"
-  , fileUploadIsPrivate :: Bool       -- ^ Whether to upload file as private
+  { fileUploadIsPrivate :: Bool       -- ^ Whether to upload file as private
+  , fileUploadDocName :: Maybe Text   -- ^ Name of document to attach the file to, e.g. @Just "ITEM-0001"@
+  , fileUploadDocType :: Maybe Text   -- ^ DocType of document to attach the file to, e.g. @Just "Item"@
   }
 
 
 defaultFileUploadParams :: FileUploadParams
 defaultFileUploadParams = FileUploadParams
-  { fileUploadDocType = Nothing
+  { fileUploadIsPrivate = True
   , fileUploadDocName = Nothing
-  , fileUploadIsPrivate = True
+  , fileUploadDocType = Nothing
   }
 
 -- | Pretty-print JSON API response or print HTTP status and message
@@ -319,7 +319,7 @@ postMethodCall
 postMethodCall manager config methodName args =
   remoteMethodCall manager config methodName "POST" args
 
- -- | Uploads a file and attaches it to an existing document.
+-- | Upload a file and optionally attach it to an existing document.
 uploadFile
   :: Manager
   -> Config

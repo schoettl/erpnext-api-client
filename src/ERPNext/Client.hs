@@ -230,7 +230,7 @@ andThen
   -> IO (ApiResponse a, Maybe (ApiResponse b))
 andThen = andThenWith id
 
--- | Uploads a file and attaches it to an existing document.
+-- | Upload a file and optionally attach it to an existing document.
 uploadFile :: forall a. FromJSON a
            => Manager
            -> Config
