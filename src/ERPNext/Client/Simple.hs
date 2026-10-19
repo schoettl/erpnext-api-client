@@ -136,8 +136,8 @@ showApiResponseDebug response =
     status = responseStatus $ getResponse response
     body = case response of
       (Ok _ val _) -> showJsonPretty val
-      (Err _ (Just (val, _))) ->
-        let mainOutput = showJsonPretty val
+      (Err _ (Just (val, parsingError))) ->
+        let mainOutput = "JSON parsing error: " <> unpack parsingError <> "\n\n" <> showJsonPretty val
             excOutput = maybe "" ("\n\nParsed \"exc\" field:\n" ++) $ extractExceptionTraceback val
         in mainOutput ++ excOutput
       (Err _ Nothing) -> "No valid JSON response."
