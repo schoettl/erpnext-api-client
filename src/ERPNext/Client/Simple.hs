@@ -15,6 +15,8 @@ module ERPNext.Client.Simple
   , putDoc
   , getMethodCall
   , postMethodCall
+  , getMethodCallPlain
+  , postMethodCallPlain
   , deleteDoc
   , mkSecret
   , mkConfig
@@ -285,18 +287,15 @@ deleteDoc manager config docTypeName docName = do
   return $ parseDeleteResponse response
 
 -- | Helper function for method calls that handles the common logic.
-remoteMethodCall :: Manager
+remoteMethodCall
+           :: BS.ByteString -- ^ HTTP method (GET or POST)
+           -> Manager
            -> Config
            -> Text -- ^ Method name
-           -> BS.ByteString -- ^ HTTP method (GET or POST)
            -> [(Text, Maybe Text)] -- ^ Parameters
            -> IO (ApiResponse Value)
-remoteMethodCall manager config methodName httpMethod args = do
-  let path = "/method/" <> urlEncode methodName
-  request <- createRequest config path httpMethod
-  let args' = map (\(x,y) -> (encodeUtf8 x, encodeUtf8 <$> y)) args
-  let requestWithArgs = setQueryString args' request
-  response <- httpLbs requestWithArgs manager
+remoteMethodCall httpMethod manager config methodName args = do
+  response <- remoteMethodCallPlain httpMethod manager config methodName args
   return $ parseMethodResponse response
 
 -- | Read-only remote method call using HTTP GET.
@@ -306,8 +305,7 @@ getMethodCall
           -> Text -- ^ Method name, e.g. @frappe.auth.get_logged_user@.
           -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
           -> IO (ApiResponse Value)
-getMethodCall manager config methodName args =
-  remoteMethodCall manager config methodName "GET" args
+getMethodCall = remoteMethodCall "GET"
 
 -- | Remote method call using HTTP POST that can modify state on ERPNext.
 postMethodCall
@@ -316,8 +314,43 @@ postMethodCall
           -> Text -- ^ Method name, e.g. @frappe.client.submit_doc@.
           -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
           -> IO (ApiResponse Value)
-postMethodCall manager config methodName args =
-  remoteMethodCall manager config methodName "POST" args
+postMethodCall = remoteMethodCall "POST"
+
+-- | Helper function for method calls that handles the common logic.
+remoteMethodCallPlain
+           :: BS.ByteString -- ^ HTTP method (GET or POST)
+           -> Manager
+           -> Config
+           -> Text -- ^ Method name
+           -> [(Text, Maybe Text)] -- ^ Parameters
+           -> IO (Response LBS.ByteString)
+remoteMethodCallPlain httpMethod manager config methodName args = do
+  let path = "/method/" <> urlEncode methodName
+  request <- createRequest config path httpMethod
+  let args' = map (\(x,y) -> (encodeUtf8 x, encodeUtf8 <$> y)) args
+  let requestWithArgs = setQueryString args' request
+  response <- httpLbs requestWithArgs manager
+  return response
+
+-- | Read-only remote method call using HTTP GET.
+getMethodCallPlain
+          :: Manager
+          -> Config
+          -> Text -- ^ Method name, e.g. @frappe.auth.get_logged_user@.
+          -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
+          -> IO (Response LBS.ByteString)
+getMethodCallPlain manager config methodName args =
+  remoteMethodCallPlain "GET" manager config methodName args
+
+-- | Remote method call using HTTP POST that can modify state on ERPNext.
+postMethodCallPlain
+          :: Manager
+          -> Config
+          -> Text -- ^ Method name, e.g. @frappe.client.submit_doc@.
+          -> [(Text, Maybe Text)] -- ^ Parameters for remote method call, passed as query string.
+          -> IO (Response LBS.ByteString)
+postMethodCallPlain manager config methodName args =
+  remoteMethodCallPlain "POST" manager config methodName args
 
 -- | Upload a file and optionally attach it to an existing document.
 uploadFile
