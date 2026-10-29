@@ -21,6 +21,7 @@ data QueryStringParam
   | Fields [Fieldname] -- ^ Select fields
   | AndFilter [Filter] -- ^ Filter terms combined with logical AND
   | OrFilter [Filter] -- ^ Filter terms combined with logical OR
+  | CustomParam Text Text
 
 renderQueryStringParam :: QueryStringParam -> Text
 renderQueryStringParam qsParam =
@@ -44,6 +45,9 @@ renderQueryStringParam qsParam =
 
     OrFilter filters ->
       "or_filters=" <> renderFilters filters
+
+    CustomParam x y ->
+      x <> "=" <> y -- TODO: url encode?
 
 renderFields :: [Fieldname] -> Text
 renderFields fields =
